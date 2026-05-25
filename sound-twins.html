@@ -551,10 +551,12 @@
       pointer-events: none;
       transform: translate(-50%, -50%);
       box-shadow: 0 0 0 10px rgba(245, 197, 66, 0.18), 0 0 30px rgba(8, 127, 149, 0.24);
+      transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
     .laser-dot.show {
-      animation: laserPing 1.4s ease both;
+      opacity: 1;
+      animation: laserHold 1.35s ease-in-out infinite;
     }
 
     .found-pairs {
@@ -737,21 +739,12 @@
       }
     }
 
-    @keyframes laserPing {
-      0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.62);
+    @keyframes laserHold {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(0.96);
       }
-      18% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
-      78% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(1.45);
+      50% {
+        transform: translate(-50%, -50%) scale(1.08);
       }
     }
 
@@ -909,7 +902,7 @@
       {
         id: "bossy-r",
         label: "Bossy R",
-        defaultSelected: true,
+        defaultSelected: false,
         words: [
           { word: "bird", spelling: "ir" },
           { word: "girl", spelling: "ir" },
@@ -928,7 +921,7 @@
       {
         id: "hard-c",
         label: "Hard C",
-        defaultSelected: true,
+        defaultSelected: false,
         words: [
           { word: "cat", spelling: "hard c" },
           { word: "cup", spelling: "hard c" },
@@ -942,7 +935,7 @@
       {
         id: "soft-c",
         label: "Soft C",
-        defaultSelected: true,
+        defaultSelected: false,
         words: [
           { word: "city", spelling: "soft c" },
           { word: "center", spelling: "soft c" },
@@ -1272,7 +1265,6 @@
     let currentHighlightKey = "";
     let currentPointerKey = "";
     let highlightTimer = null;
-    let laserTimer = null;
     let laserActive = false;
     let pendingPlayerStart = false;
     const cardLayouts = {
@@ -1614,29 +1606,26 @@
       currentPointerKey = pointerKey;
       laserDot.classList.remove("show");
 
-      if (laserTimer) {
-        clearTimeout(laserTimer);
-        laserTimer = null;
-      }
-
       if (!pointer) return;
 
       laserDot.style.setProperty("--laser-x", `${pointer.x}%`);
       laserDot.style.setProperty("--laser-y", `${pointer.y}%`);
       void laserDot.offsetWidth;
       laserDot.classList.add("show");
-      laserTimer = setTimeout(() => {
-        laserDot.classList.remove("show");
-        currentPointerKey = "";
-      }, 1500);
     }
 
-    function toggleLaserMode() {
+    async function toggleLaserMode() {
       if (!liveMode || liveRole !== "teacher") return;
 
       laserActive = !laserActive;
       laserBtn.classList.toggle("active", laserActive);
       wordGrid.classList.toggle("laser-armed", laserActive);
+      if (!laserActive && roomRef) {
+        await roomRef.update({
+          pointer: null,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
     }
 
     function applyCardHighlight(highlight) {

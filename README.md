@@ -14,7 +14,7 @@ The teacher setup screen can create a player link. The link stores the selected 
 
 The teacher setup screen can also create a Firebase live room. In a live room, the player joins with the generated link, clicks Ready, and waits for the teacher to start. The teacher can observe the player status, current cards, and progress, then reset the room when needed.
 
-The teacher can click a word card in the observer view to briefly spotlight the same card on the player's screen. The teacher can also toggle the Laser tool and click anywhere on the shared board to flash a temporary pointer in the same relative position on the player's screen.
+The teacher can click a word card in the observer view to briefly spotlight the same card on the player's screen. The teacher can also toggle the Laser tool and click anywhere on the shared board to place a persistent pointer in the same relative position on the player's screen. Turning Laser off clears the pointer.
 
 For first testing, the Firebase Realtime Database needs rules that allow room reads and writes. A simple testing rule is:
 
