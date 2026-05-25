@@ -1,0 +1,1552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound Twins</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Nunito", Arial, sans-serif;
+      background: #eef7d5;
+      color: #103f52;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      background: #087f95;
+      color: white;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(20, 63, 74, 0.16);
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+
+    button:hover {
+      background: #12aaa9;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .app {
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 14% 18%, rgba(245, 197, 66, 0.22), transparent 22%),
+        radial-gradient(circle at 86% 80%, rgba(18, 170, 169, 0.22), transparent 24%),
+        linear-gradient(135deg, #eef7d5 0%, #d8f5ea 52%, #e7f1ff 100%);
+    }
+
+    .setup-panel {
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(8, 78, 99, 0.26);
+      backdrop-filter: blur(5px);
+    }
+
+    .setup-card {
+      width: min(720px, 100%);
+      max-height: calc(100vh - 44px);
+      overflow: auto;
+      padding: 24px;
+      border: 4px solid rgba(18, 170, 169, 0.46);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 22px 70px rgba(20, 63, 74, 0.26);
+    }
+
+    .app.playing .setup-panel {
+      display: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .brand-logo {
+      width: 84px;
+      height: 84px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+
+    .mini-brain {
+      width: 46px;
+      height: 38px;
+      position: relative;
+      flex: 0 0 auto;
+      border: 4px solid #087f95;
+      border-radius: 22px 22px 18px 18px;
+      background: #ffd96a;
+    }
+
+    .mini-brain::before,
+    .mini-brain::after {
+      content: "";
+      position: absolute;
+      top: -8px;
+      width: 24px;
+      height: 24px;
+      border: 4px solid #087f95;
+      border-bottom: 0;
+      border-radius: 50% 50% 0 0;
+      background: #ffd96a;
+    }
+
+    .mini-brain::before {
+      left: 2px;
+    }
+
+    .mini-brain::after {
+      right: 2px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #087f95;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .setup-title {
+      margin: 22px 0 10px;
+      color: #087f95;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .sound-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .sound-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 50px;
+      padding: 10px 12px;
+      border: 3px solid rgba(18, 170, 169, 0.38);
+      border-radius: 10px;
+      background: #ffffff;
+      color: #103f52;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .sound-option input {
+      width: 22px;
+      height: 22px;
+      accent-color: #087f95;
+    }
+
+    .setting-row {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-weight: 900;
+    }
+
+    .setting-row input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 3px solid rgba(18, 170, 169, 0.5);
+      border-radius: 10px;
+      color: #103f52;
+      font-weight: 900;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 12px 0;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .toggle-row input {
+      width: 22px;
+      height: 22px;
+      accent-color: #087f95;
+    }
+
+    .setup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .share-box {
+      display: none;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .share-box.show {
+      display: grid;
+    }
+
+    .share-box input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 3px solid rgba(18, 170, 169, 0.5);
+      border-radius: 10px;
+      color: #103f52;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .share-note {
+      min-height: 20px;
+      color: #087f95;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      place-items: center;
+      min-height: 45px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #087f95;
+      text-decoration: none;
+      font-weight: 900;
+      box-shadow: 0 4px 10px rgba(20, 63, 74, 0.12);
+    }
+
+    .game-area {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+      padding: 18px;
+    }
+
+    .status-bar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .power-station {
+      display: grid;
+      grid-template-columns: 62px 92px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border: 3px solid rgba(8, 127, 149, 0.2);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 22px rgba(20, 63, 74, 0.08);
+    }
+
+    .corner-logo {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      opacity: 0.9;
+    }
+
+    .brain {
+      width: 86px;
+      height: 72px;
+      position: relative;
+      display: grid;
+      place-items: end center;
+      padding-bottom: 7px;
+      border: 5px solid #087f95;
+      border-radius: 42px 42px 30px 30px;
+      background:
+        radial-gradient(circle at 30% 30%, #fff5ae 0 12px, transparent 13px),
+        radial-gradient(circle at 70% 35%, #fff5ae 0 10px, transparent 11px),
+        #ffd96a;
+      color: #087f95;
+      font-weight: 900;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .brain::before,
+    .brain::after {
+      content: "";
+      position: absolute;
+      top: -14px;
+      width: 43px;
+      height: 42px;
+      border: 5px solid #087f95;
+      border-bottom: 0;
+      border-radius: 50% 50% 0 0;
+      background: #ffd96a;
+      z-index: -1;
+    }
+
+    .brain::before {
+      left: 2px;
+    }
+
+    .brain::after {
+      right: 2px;
+    }
+
+    .brain.boost {
+      transform: scale(1.08) rotate(-2deg);
+      filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.9));
+    }
+
+    .power-info {
+      display: grid;
+      gap: 8px;
+    }
+
+    .round-line {
+      color: #087f95;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .power-track {
+      height: 24px;
+      border: 3px solid #087f95;
+      border-radius: 999px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .power-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #d8c75a, #52c98c, #12aaa9);
+      transition: width 0.35s ease;
+    }
+
+    .timer {
+      min-width: 112px;
+      padding: 12px 14px;
+      border: 3px solid rgba(245, 197, 66, 0.72);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.76);
+      color: #087f95;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 900;
+      box-shadow: 0 8px 22px rgba(20, 63, 74, 0.08);
+    }
+
+    .quiet-button {
+      min-height: 48px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.84);
+      color: #087f95;
+      box-shadow: 0 6px 16px rgba(20, 63, 74, 0.1);
+    }
+
+    .player-mode .teacher-only {
+      display: none;
+    }
+
+    .app.player-mode ~ .completion .teacher-only {
+      display: none;
+    }
+
+    .board {
+      display: grid;
+      grid-template-rows: minmax(360px, 1fr);
+      gap: 0;
+      min-height: 0;
+    }
+
+    .feedback {
+      position: fixed;
+      left: 50%;
+      top: 120px;
+      z-index: 5;
+      min-height: 48px;
+      display: grid;
+      place-items: center;
+      padding: 8px 18px;
+      border: 3px solid rgba(18, 170, 169, 0.38);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #087f95;
+      text-align: center;
+      font-size: clamp(20px, 3vw, 30px);
+      font-weight: 900;
+      box-shadow: 0 8px 22px rgba(20, 63, 74, 0.1);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -8px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .feedback.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .feedback.celebrate {
+      animation: matchCelebrate 0.78s ease both;
+    }
+
+    .word-grid {
+      min-height: calc(100vh - 148px);
+      position: relative;
+      transition: opacity 0.45s ease;
+    }
+
+    .word-grid.fading-out {
+      opacity: 0;
+    }
+
+    .word-card {
+      width: clamp(138px, 17vw, 220px);
+      min-height: clamp(112px, 15vw, 172px);
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      border: 4px solid #12aaa9;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #103f52;
+      text-align: center;
+      font-size: clamp(28px, 4vw, 50px);
+      font-weight: 900;
+      box-shadow: 0 14px 26px rgba(20, 63, 74, 0.14);
+      cursor: pointer;
+      user-select: none;
+      transform: rotate(var(--rotation));
+      animation: cardRock 5.2s ease-in-out infinite;
+      animation-delay: var(--delay);
+      opacity: 1;
+      transition: border-color 0.16s ease, background 0.16s ease, opacity 0.48s ease, box-shadow 0.16s ease;
+    }
+
+    .word-card.entering {
+      opacity: 0;
+    }
+
+    .word-card:hover:not(.matched) {
+      border-color: #f5c542;
+      box-shadow: 0 0 0 7px rgba(245, 197, 66, 0.2), 0 14px 26px rgba(20, 63, 74, 0.14);
+    }
+
+    .word-card.selected {
+      border-color: #f5c542;
+      background: #fff6d7;
+      box-shadow: 0 0 0 7px rgba(245, 197, 66, 0.22), 0 10px 24px rgba(20, 63, 74, 0.15);
+    }
+
+    .word-card.matched {
+      border-color: #52c98c;
+      background: #e8ffe9;
+      color: #277345;
+      cursor: default;
+      opacity: 0.58;
+    }
+
+    .word-card.wrong {
+      border-color: #e15b64;
+      animation: shake 0.36s ease;
+    }
+
+    .found-pairs {
+      display: none;
+    }
+
+    .pair-chip,
+    .odd-chip {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #087f95;
+      color: white;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .odd-chip {
+      background: #835f0e;
+    }
+
+    .completion {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(12, 48, 58, 0.48);
+      z-index: 20;
+    }
+
+    .completion.show {
+      display: flex;
+    }
+
+    .completion-panel {
+      width: min(430px, 100%);
+      padding: 28px;
+      border-radius: 16px;
+      text-align: center;
+      background: #ffffff;
+      box-shadow: 0 18px 60px rgba(20, 63, 74, 0.3);
+    }
+
+    .completion-panel h2 {
+      margin: 0 0 10px;
+      color: #087f95;
+      font-size: 34px;
+    }
+
+    .completion-panel p {
+      margin: 0 0 22px;
+      color: #087f95;
+      font-size: 19px;
+      font-weight: 800;
+    }
+
+    .completion-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    @keyframes cardRock {
+      0%, 100% {
+        transform: rotate(var(--rotation)) translateY(0);
+      }
+      50% {
+        transform: rotate(calc(var(--rotation) * -0.35)) translateY(-5px);
+      }
+    }
+
+    @keyframes matchCelebrate {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 8px) scale(0.92);
+      }
+      28% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1.08);
+        box-shadow: 0 0 0 8px rgba(245, 197, 66, 0.22), 0 8px 22px rgba(20, 63, 74, 0.1);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+      }
+    }
+
+    @media (max-width: 940px) {
+      .sound-options {
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .game-area,
+      .setup-panel {
+        padding: 16px;
+      }
+
+      .status-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .sound-options {
+        grid-template-columns: 1fr;
+      }
+
+      .word-card {
+        width: clamp(132px, 38vw, 172px);
+        min-height: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <aside class="setup-panel" aria-label="Teacher setup">
+      <div class="setup-card">
+        <div class="brand">
+          <img class="brand-logo" src="Adaptivelogotrans.png" alt="Adaptive">
+          <div class="mini-brain" aria-hidden="true"></div>
+          <h1>Sound Twins</h1>
+        </div>
+
+        <div class="setup-title">Sound families</div>
+        <div class="sound-options" id="soundOptions"></div>
+
+        <div class="setup-title">Game settings</div>
+        <label class="setting-row">
+          Rounds
+          <input id="roundInput" type="number" min="2" max="20" value="6">
+        </label>
+
+        <label class="toggle-row">
+          <input id="timerToggle" type="checkbox">
+          Use a timer
+        </label>
+
+        <label class="setting-row">
+          Timer seconds
+          <input id="timerInput" type="number" min="30" max="300" step="15" value="120" disabled>
+        </label>
+
+        <label class="toggle-row">
+          <input id="labelToggle" type="checkbox" checked>
+          Show match celebration
+        </label>
+
+        <div class="setup-actions">
+          <button id="startBtn" type="button">Start Game</button>
+          <button id="shareBtn" type="button">Create Player Link</button>
+          <a class="nav-link" href="index.html">Menu</a>
+        </div>
+
+        <div class="share-box" id="shareBox">
+          <input id="shareLink" type="text" readonly aria-label="Player link">
+          <div class="share-note" id="shareNote"></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="game-area" aria-label="Sound Twins game">
+      <div class="status-bar">
+        <div class="power-station">
+          <img class="corner-logo" src="Adaptivelogotrans.png" alt="Adaptive">
+          <div class="brain" id="brain">ON</div>
+          <div class="power-info">
+            <div class="round-line" id="roundLine">Choose sounds and start.</div>
+            <div class="power-track" aria-label="Brain power">
+              <div class="power-fill" id="powerFill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="timer" id="timer" hidden>2:00</div>
+        <button class="quiet-button teacher-only" id="settingsBtn" type="button">Settings</button>
+      </div>
+
+      <div class="board">
+        <div class="feedback" id="feedback"></div>
+        <div class="word-grid" id="wordGrid" style="--card-count: 5"></div>
+        <div class="found-pairs" id="foundPairs" aria-label="Found pairs"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="completion" id="completion">
+    <div class="completion-panel">
+      <h2>Brain powered!</h2>
+      <p id="completionText">You found the sound twins.</p>
+      <div class="completion-actions">
+        <button id="playAgainBtn" type="button">Play Again</button>
+        <button class="teacher-only" id="completionSettingsBtn" type="button">Teacher Controls</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const soundFamilies = [
+      {
+        id: "bossy-r",
+        label: "Bossy R",
+        defaultSelected: true,
+        words: [
+          { word: "bird", spelling: "ir" },
+          { word: "girl", spelling: "ir" },
+          { word: "shirt", spelling: "ir" },
+          { word: "first", spelling: "ir" },
+          { word: "her", spelling: "er" },
+          { word: "fern", spelling: "er" },
+          { word: "term", spelling: "er" },
+          { word: "sister", spelling: "er" },
+          { word: "fur", spelling: "ur" },
+          { word: "turn", spelling: "ur" },
+          { word: "curl", spelling: "ur" },
+          { word: "nurse", spelling: "ur" }
+        ]
+      },
+      {
+        id: "hard-c",
+        label: "Hard C",
+        defaultSelected: true,
+        words: [
+          { word: "cat", spelling: "hard c" },
+          { word: "cup", spelling: "hard c" },
+          { word: "cake", spelling: "hard c" },
+          { word: "corn", spelling: "hard c" },
+          { word: "clap", spelling: "hard c" },
+          { word: "crab", spelling: "hard c" },
+          { word: "coat", spelling: "hard c" }
+        ]
+      },
+      {
+        id: "soft-c",
+        label: "Soft C",
+        defaultSelected: true,
+        words: [
+          { word: "city", spelling: "soft c" },
+          { word: "center", spelling: "soft c" },
+          { word: "ice", spelling: "soft c" },
+          { word: "face", spelling: "soft c" },
+          { word: "circus", spelling: "soft c" },
+          { word: "pencil", spelling: "soft c" },
+          { word: "bicycle", spelling: "soft c" },
+          { word: "cycle", spelling: "soft c" }
+        ]
+      },
+      {
+        id: "long-a",
+        label: "Long A",
+        defaultSelected: false,
+        words: [
+          { word: "cake", spelling: "a_e" },
+          { word: "face", spelling: "a_e" },
+          { word: "name", spelling: "a_e" },
+          { word: "game", spelling: "a_e" },
+          { word: "tape", spelling: "a_e" },
+          { word: "plane", spelling: "a_e" },
+          { word: "snake", spelling: "a_e" },
+          { word: "grape", spelling: "a_e" },
+          { word: "plate", spelling: "a_e" },
+          { word: "wave", spelling: "a_e" },
+          { word: "cave", spelling: "a_e" },
+          { word: "gate", spelling: "a_e" },
+          { word: "rain", spelling: "ai" },
+          { word: "train", spelling: "ai" },
+          { word: "mail", spelling: "ai" },
+          { word: "tail", spelling: "ai" },
+          { word: "paint", spelling: "ai" },
+          { word: "snail", spelling: "ai" },
+          { word: "chain", spelling: "ai" },
+          { word: "brain", spelling: "ai" },
+          { word: "sail", spelling: "ai" },
+          { word: "wait", spelling: "ai" },
+          { word: "nail", spelling: "ai" },
+          { word: "plain", spelling: "ai" },
+          { word: "play", spelling: "ay" },
+          { word: "day", spelling: "ay" },
+          { word: "say", spelling: "ay" },
+          { word: "tray", spelling: "ay" },
+          { word: "gray", spelling: "ay" },
+          { word: "stay", spelling: "ay" },
+          { word: "clay", spelling: "ay" },
+          { word: "spray", spelling: "ay" },
+          { word: "way", spelling: "ay" },
+          { word: "pay", spelling: "ay" },
+          { word: "hay", spelling: "ay" },
+          { word: "away", spelling: "ay" }
+        ]
+      },
+      {
+        id: "long-e",
+        label: "Long E",
+        defaultSelected: false,
+        words: [
+          { word: "see", spelling: "ee" },
+          { word: "bee", spelling: "ee" },
+          { word: "seed", spelling: "ee" },
+          { word: "feet", spelling: "ee" },
+          { word: "green", spelling: "ee" },
+          { word: "sleep", spelling: "ee" },
+          { word: "tree", spelling: "ee" },
+          { word: "three", spelling: "ee" },
+          { word: "sheep", spelling: "ee" },
+          { word: "wheel", spelling: "ee" },
+          { word: "queen", spelling: "ee" },
+          { word: "teeth", spelling: "ee" },
+          { word: "sea", spelling: "ea" },
+          { word: "read", spelling: "ea" },
+          { word: "leaf", spelling: "ea" },
+          { word: "teach", spelling: "ea" },
+          { word: "peach", spelling: "ea" },
+          { word: "eat", spelling: "ea" },
+          { word: "meat", spelling: "ea" },
+          { word: "team", spelling: "ea" },
+          { word: "beach", spelling: "ea" },
+          { word: "clean", spelling: "ea" },
+          { word: "dream", spelling: "ea" },
+          { word: "speak", spelling: "ea" },
+          { word: "these", spelling: "e_e" },
+          { word: "theme", spelling: "e_e" },
+          { word: "scene", spelling: "e_e" },
+          { word: "complete", spelling: "e_e" },
+          { word: "here", spelling: "e_e" },
+          { word: "delete", spelling: "e_e" },
+          { word: "eve", spelling: "e_e" },
+          { word: "athlete", spelling: "e_e" },
+          { word: "happy", spelling: "final y" },
+          { word: "baby", spelling: "final y" },
+          { word: "candy", spelling: "final y" },
+          { word: "sunny", spelling: "final y" },
+          { word: "puppy", spelling: "final y" },
+          { word: "silly", spelling: "final y" },
+          { word: "funny", spelling: "final y" },
+          { word: "city", spelling: "final y" },
+          { word: "party", spelling: "final y" },
+          { word: "pretty", spelling: "final y" },
+          { word: "key", spelling: "ey" },
+          { word: "monkey", spelling: "ey" },
+          { word: "honey", spelling: "ey" },
+          { word: "money", spelling: "ey" },
+          { word: "valley", spelling: "ey" },
+          { word: "turkey", spelling: "ey" },
+          { word: "chimney", spelling: "ey" },
+          { word: "donkey", spelling: "ey" },
+          { word: "journey", spelling: "ey" }
+        ]
+      },
+      {
+        id: "long-i",
+        label: "Long I",
+        defaultSelected: false,
+        words: [
+          { word: "kite", spelling: "i_e" },
+          { word: "bike", spelling: "i_e" },
+          { word: "smile", spelling: "i_e" },
+          { word: "five", spelling: "i_e" },
+          { word: "time", spelling: "i_e" },
+          { word: "line", spelling: "i_e" },
+          { word: "slide", spelling: "i_e" },
+          { word: "drive", spelling: "i_e" },
+          { word: "white", spelling: "i_e" },
+          { word: "prize", spelling: "i_e" },
+          { word: "shine", spelling: "i_e" },
+          { word: "hide", spelling: "i_e" },
+          { word: "light", spelling: "igh" },
+          { word: "night", spelling: "igh" },
+          { word: "high", spelling: "igh" },
+          { word: "right", spelling: "igh" },
+          { word: "bright", spelling: "igh" },
+          { word: "flight", spelling: "igh" },
+          { word: "sight", spelling: "igh" },
+          { word: "tight", spelling: "igh" },
+          { word: "might", spelling: "igh" },
+          { word: "fight", spelling: "igh" },
+          { word: "fly", spelling: "final y" },
+          { word: "cry", spelling: "final y" },
+          { word: "sky", spelling: "final y" },
+          { word: "my", spelling: "final y" },
+          { word: "shy", spelling: "final y" },
+          { word: "dry", spelling: "final y" },
+          { word: "why", spelling: "final y" },
+          { word: "try", spelling: "final y" },
+          { word: "by", spelling: "final y" },
+          { word: "July", spelling: "final y" },
+          { word: "pie", spelling: "ie" },
+          { word: "tie", spelling: "ie" },
+          { word: "lie", spelling: "ie" },
+          { word: "tried", spelling: "ie" },
+          { word: "cried", spelling: "ie" },
+          { word: "fries", spelling: "ie" }
+        ]
+      },
+      {
+        id: "long-o",
+        label: "Long O",
+        defaultSelected: false,
+        words: [
+          { word: "home", spelling: "o_e" },
+          { word: "rope", spelling: "o_e" },
+          { word: "bone", spelling: "o_e" },
+          { word: "nose", spelling: "o_e" },
+          { word: "stone", spelling: "o_e" },
+          { word: "cone", spelling: "o_e" },
+          { word: "joke", spelling: "o_e" },
+          { word: "note", spelling: "o_e" },
+          { word: "rose", spelling: "o_e" },
+          { word: "globe", spelling: "o_e" },
+          { word: "smoke", spelling: "o_e" },
+          { word: "phone", spelling: "o_e" },
+          { word: "boat", spelling: "oa" },
+          { word: "road", spelling: "oa" },
+          { word: "coat", spelling: "oa" },
+          { word: "goat", spelling: "oa" },
+          { word: "soap", spelling: "oa" },
+          { word: "toast", spelling: "oa" },
+          { word: "float", spelling: "oa" },
+          { word: "throat", spelling: "oa" },
+          { word: "coach", spelling: "oa" },
+          { word: "loaf", spelling: "oa" },
+          { word: "oak", spelling: "oa" },
+          { word: "goal", spelling: "oa" },
+          { word: "snow", spelling: "ow" },
+          { word: "window", spelling: "ow" },
+          { word: "yellow", spelling: "ow" },
+          { word: "pillow", spelling: "ow" },
+          { word: "bowl", spelling: "ow" },
+          { word: "grow", spelling: "ow" },
+          { word: "show", spelling: "ow" },
+          { word: "slow", spelling: "ow" },
+          { word: "throw", spelling: "ow" },
+          { word: "below", spelling: "ow" },
+          { word: "own", spelling: "ow" },
+          { word: "toe", spelling: "oe" },
+          { word: "doe", spelling: "oe" },
+          { word: "goes", spelling: "oe" },
+          { word: "Joe", spelling: "oe" }
+        ]
+      },
+      {
+        id: "long-u",
+        label: "Long U",
+        defaultSelected: false,
+        words: [
+          { word: "cube", spelling: "u_e" },
+          { word: "mule", spelling: "u_e" },
+          { word: "use", spelling: "u_e" },
+          { word: "cute", spelling: "u_e" },
+          { word: "huge", spelling: "u_e" },
+          { word: "tune", spelling: "u_e" },
+          { word: "cue", spelling: "ue" },
+          { word: "rescue", spelling: "ue" },
+          { word: "argue", spelling: "ue" },
+          { word: "statue", spelling: "ue" },
+          { word: "few", spelling: "ew" },
+          { word: "new", spelling: "ew" },
+          { word: "dew", spelling: "ew" },
+          { word: "knew", spelling: "ew" }
+        ]
+      },
+      {
+        id: "long-oo",
+        label: "Long OO",
+        defaultSelected: false,
+        words: [
+          { word: "flute", spelling: "u_e" },
+          { word: "rule", spelling: "u_e" },
+          { word: "rude", spelling: "u_e" },
+          { word: "June", spelling: "u_e" },
+          { word: "tube", spelling: "u_e" },
+          { word: "prune", spelling: "u_e" },
+          { word: "blue", spelling: "ue" },
+          { word: "clue", spelling: "ue" },
+          { word: "glue", spelling: "ue" },
+          { word: "true", spelling: "ue" },
+          { word: "due", spelling: "ue" },
+          { word: "Sue", spelling: "ue" },
+          { word: "chew", spelling: "ew" },
+          { word: "flew", spelling: "ew" },
+          { word: "grew", spelling: "ew" },
+          { word: "drew", spelling: "ew" },
+          { word: "screw", spelling: "ew" },
+          { word: "threw", spelling: "ew" },
+          { word: "fruit", spelling: "ui" },
+          { word: "suit", spelling: "ui" },
+          { word: "juice", spelling: "ui" },
+          { word: "cruise", spelling: "ui" },
+          { word: "bruise", spelling: "ui" }
+        ]
+      }
+    ];
+    const distractorWords = [
+      { word: "map", spelling: "short a", soundId: "distractor-short-a", soundLabel: "Short A" },
+      { word: "bed", spelling: "short e", soundId: "distractor-short-e", soundLabel: "Short E" },
+      { word: "fish", spelling: "short i", soundId: "distractor-short-i", soundLabel: "Short I" },
+      { word: "dog", spelling: "short o", soundId: "distractor-short-o", soundLabel: "Short O" },
+      { word: "sun", spelling: "short u", soundId: "distractor-short-u", soundLabel: "Short U" },
+      { word: "box", spelling: "short o", soundId: "distractor-short-o", soundLabel: "Short O" },
+      { word: "pen", spelling: "short e", soundId: "distractor-short-e", soundLabel: "Short E" },
+      { word: "hop", spelling: "short o", soundId: "distractor-short-o", soundLabel: "Short O" },
+      { word: "duck", spelling: "short u", soundId: "distractor-short-u", soundLabel: "Short U" },
+      { word: "red", spelling: "short e", soundId: "distractor-short-e", soundLabel: "Short E" },
+      { word: "jam", spelling: "short a", soundId: "distractor-short-a", soundLabel: "Short A" },
+      { word: "sock", spelling: "short o", soundId: "distractor-short-o", soundLabel: "Short O" }
+    ];
+
+    const soundOptions = document.getElementById("soundOptions");
+    const app = document.getElementById("app");
+    const startBtn = document.getElementById("startBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const shareBox = document.getElementById("shareBox");
+    const shareLink = document.getElementById("shareLink");
+    const shareNote = document.getElementById("shareNote");
+    const settingsBtn = document.getElementById("settingsBtn");
+    const roundInput = document.getElementById("roundInput");
+    const timerToggle = document.getElementById("timerToggle");
+    const timerInput = document.getElementById("timerInput");
+    const labelToggle = document.getElementById("labelToggle");
+    const roundLine = document.getElementById("roundLine");
+    const powerFill = document.getElementById("powerFill");
+    const brain = document.getElementById("brain");
+    const timer = document.getElementById("timer");
+    const feedback = document.getElementById("feedback");
+    const wordGrid = document.getElementById("wordGrid");
+    const foundPairs = document.getElementById("foundPairs");
+    const completion = document.getElementById("completion");
+    const completionText = document.getElementById("completionText");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    const completionSettingsBtn = document.getElementById("completionSettingsBtn");
+
+    let settings = {
+      totalRounds: 6,
+      timerEnabled: false,
+      timerSeconds: 120,
+      showLabels: true
+    };
+    let roundNumber = 0;
+    let scorePairs = 0;
+    let selectedSounds = [];
+    let soundQueue = [];
+    let activeRound = null;
+    let selectedCards = [];
+    let timerId = null;
+    let remainingSeconds = 0;
+    let playerMode = false;
+    const cardLayouts = {
+      3: [
+        [
+          { x: "12%", y: "22%", rotation: -7 },
+          { x: "42%", y: "38%", rotation: 5 },
+          { x: "70%", y: "18%", rotation: -3 }
+        ],
+        [
+          { x: "18%", y: "48%", rotation: 6 },
+          { x: "43%", y: "16%", rotation: -5 },
+          { x: "68%", y: "45%", rotation: 4 }
+        ],
+        [
+          { x: "10%", y: "34%", rotation: -4 },
+          { x: "40%", y: "18%", rotation: 7 },
+          { x: "72%", y: "36%", rotation: -6 }
+        ]
+      ],
+      5: [
+        [
+          { x: "7%", y: "16%", rotation: -8 },
+          { x: "31%", y: "30%", rotation: 5 },
+          { x: "55%", y: "12%", rotation: -4 },
+          { x: "70%", y: "43%", rotation: 7 },
+          { x: "17%", y: "55%", rotation: 3 }
+        ],
+        [
+          { x: "10%", y: "44%", rotation: 5 },
+          { x: "25%", y: "15%", rotation: -6 },
+          { x: "48%", y: "52%", rotation: -3 },
+          { x: "62%", y: "20%", rotation: 8 },
+          { x: "76%", y: "48%", rotation: -5 }
+        ],
+        [
+          { x: "6%", y: "28%", rotation: -4 },
+          { x: "27%", y: "52%", rotation: 7 },
+          { x: "42%", y: "12%", rotation: 3 },
+          { x: "60%", y: "38%", rotation: -8 },
+          { x: "78%", y: "18%", rotation: 5 }
+        ],
+        [
+          { x: "14%", y: "14%", rotation: 6 },
+          { x: "12%", y: "50%", rotation: -5 },
+          { x: "38%", y: "34%", rotation: -8 },
+          { x: "62%", y: "12%", rotation: 4 },
+          { x: "72%", y: "52%", rotation: 7 }
+        ]
+      ]
+    };
+
+    function renderSoundOptions() {
+      soundOptions.innerHTML = soundFamilies.map(sound => `
+        <label class="sound-option">
+          <input type="checkbox" value="${sound.id}" ${sound.defaultSelected ? "checked" : ""}>
+          ${sound.label}
+        </label>
+      `).join("");
+    }
+
+    function applySettingsToControls(config) {
+      const soundIds = new Set(config.sounds || []);
+      if (soundIds.size > 0) {
+        soundOptions.querySelectorAll("input").forEach(input => {
+          input.checked = soundIds.has(input.value);
+        });
+      }
+
+      if (config.rounds) roundInput.value = config.rounds;
+      timerToggle.checked = Boolean(config.timer);
+      timerInput.disabled = !timerToggle.checked;
+      if (config.seconds) timerInput.value = config.seconds;
+      labelToggle.checked = config.labels !== false;
+    }
+
+    function getSettingsFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const sounds = (params.get("sounds") || "")
+        .split(",")
+        .map(sound => sound.trim())
+        .filter(Boolean);
+
+      if (!sounds.length) return null;
+
+      return {
+        sounds,
+        rounds: clampNumber(params.get("rounds"), 2, 20, 6),
+        timer: params.get("timer") === "1",
+        seconds: clampNumber(params.get("seconds"), 30, 300, 120),
+        labels: params.get("labels") !== "0",
+        player: params.get("player") === "1"
+      };
+    }
+
+    function buildPlayerUrl() {
+      if (!readSettings()) return "";
+
+      const params = new URLSearchParams();
+      params.set("player", "1");
+      params.set("sounds", selectedSounds.map(sound => sound.id).join(","));
+      params.set("rounds", settings.totalRounds);
+      params.set("timer", settings.timerEnabled ? "1" : "0");
+      params.set("seconds", settings.timerSeconds);
+      params.set("labels", settings.showLabels ? "1" : "0");
+
+      return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    }
+
+    async function createPlayerLink() {
+      const url = buildPlayerUrl();
+      if (!url) {
+        feedback.textContent = "Choose at least one sound family.";
+        feedback.classList.add("show");
+        return;
+      }
+
+      shareLink.value = url;
+      shareBox.classList.add("show");
+      shareLink.select();
+
+      try {
+        await navigator.clipboard.writeText(url);
+        shareNote.textContent = "Player link copied.";
+      } catch (error) {
+        shareNote.textContent = "Player link ready.";
+      }
+    }
+
+    function shuffleArray(items) {
+      const shuffled = [...items];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.min(max, Math.max(min, Math.round(number)));
+    }
+
+    function getChosenSounds() {
+      const chosenIds = [...soundOptions.querySelectorAll("input:checked")].map(input => input.value);
+      return soundFamilies.filter(sound => chosenIds.includes(sound.id));
+    }
+
+    function readSettings() {
+      selectedSounds = getChosenSounds();
+      settings = {
+        totalRounds: clampNumber(roundInput.value, 2, 20, 6),
+        timerEnabled: timerToggle.checked,
+        timerSeconds: clampNumber(timerInput.value, 30, 300, 120),
+        showLabels: labelToggle.checked
+      };
+      roundInput.value = settings.totalRounds;
+      timerInput.value = settings.timerSeconds;
+      return selectedSounds.length > 0;
+    }
+
+    function resetSoundQueue() {
+      soundQueue = shuffleArray(selectedSounds.map(sound => sound.id));
+    }
+
+    function takeSound(excludedIds = []) {
+      if (soundQueue.length === 0 || soundQueue.every(id => excludedIds.includes(id))) {
+        resetSoundQueue();
+      }
+
+      const index = soundQueue.findIndex(id => !excludedIds.includes(id));
+      const soundId = index >= 0 ? soundQueue.splice(index, 1)[0] : selectedSounds[0].id;
+      return selectedSounds.find(sound => sound.id === soundId);
+    }
+
+    function choosePair(sound) {
+      const first = shuffleArray(sound.words)[0];
+      const differentSpelling = shuffleArray(sound.words).find(item => item.word !== first.word && item.spelling !== first.spelling);
+      const second = differentSpelling || shuffleArray(sound.words).find(item => item.word !== first.word);
+      return [
+        { ...first, soundId: sound.id, soundLabel: sound.label },
+        { ...second, soundId: sound.id, soundLabel: sound.label }
+      ];
+    }
+
+    function chooseOddWord(excludedSoundIds) {
+      const selectedIds = selectedSounds.map(sound => sound.id);
+      const selectedWords = new Set(selectedSounds.flatMap(sound => sound.words.map(item => item.word.toLowerCase())));
+      const unselectedSounds = soundFamilies
+        .filter(sound => !selectedIds.includes(sound.id) && !excludedSoundIds.includes(sound.id))
+        .map(sound => ({
+          ...sound,
+          words: sound.words.filter(item => !selectedWords.has(item.word.toLowerCase()))
+        }))
+        .filter(sound => sound.words.length > 0);
+
+      if (unselectedSounds.length > 0) {
+        const sound = shuffleArray(unselectedSounds)[0];
+        const word = shuffleArray(sound.words)[0];
+        return { ...word, soundId: sound.id, soundLabel: sound.label, odd: true };
+      }
+
+      return { ...shuffleArray(distractorWords)[0], odd: true };
+    }
+
+    function buildRound() {
+      const pairsNeeded = selectedSounds.length === 1 ? 1 : 2;
+      const roundSounds = [];
+      for (let i = 0; i < pairsNeeded; i++) {
+        roundSounds.push(takeSound(roundSounds.map(sound => sound.id)));
+      }
+
+      const pairCards = roundSounds.flatMap(sound => choosePair(sound));
+      const oddCard = chooseOddWord(roundSounds.map(sound => sound.id));
+      const cards = shuffleArray([...pairCards, oddCard]).map((card, index) => ({
+        ...card,
+        id: `${roundNumber}-${index}-${card.word}`
+      }));
+
+      activeRound = {
+        cards,
+        foundSoundIds: new Set(),
+        targetPairCount: pairsNeeded,
+        finished: false
+      };
+    }
+
+    function renderRound() {
+      const cardCount = activeRound.cards.length;
+      wordGrid.style.setProperty("--card-count", cardCount);
+      wordGrid.classList.toggle("three-card", cardCount === 3);
+      wordGrid.innerHTML = "";
+      foundPairs.innerHTML = "";
+      selectedCards = [];
+      const layout = getRoundLayout(cardCount);
+
+      activeRound.cards.forEach(card => {
+        const cardSlot = layout[wordGrid.children.length];
+        const button = document.createElement("button");
+        button.className = "word-card entering";
+        button.type = "button";
+        button.textContent = card.word;
+        button.dataset.id = card.id;
+        button.style.setProperty("--x", cardSlot.x);
+        button.style.setProperty("--y", cardSlot.y);
+        button.style.setProperty("--rotation", `${cardSlot.rotation}deg`);
+        button.style.setProperty("--delay", `${-0.4 - (wordGrid.children.length * 0.8)}s`);
+        button.addEventListener("click", () => selectCard(card.id));
+        wordGrid.appendChild(button);
+      });
+
+      updateStatus();
+      requestAnimationFrame(() => {
+        wordGrid.querySelectorAll(".word-card.entering").forEach(card => card.classList.remove("entering"));
+      });
+    }
+
+    function getRoundLayout(cardCount) {
+      const preset = shuffleArray(cardLayouts[cardCount])[0];
+      return shuffleArray(preset).map(slot => ({
+        x: jitterPercent(slot.x, -4, 4, 5, 78),
+        y: jitterPercent(slot.y, -5, 5, 8, 62),
+        rotation: slot.rotation + randomInt(-3, 3)
+      }));
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function jitterPercent(value, minJitter, maxJitter, minValue, maxValue) {
+      const number = Number.parseFloat(value);
+      const next = Math.min(maxValue, Math.max(minValue, number + randomInt(minJitter, maxJitter)));
+      return `${next}%`;
+    }
+
+    function updateStatus() {
+      if (!selectedSounds.length) {
+        roundLine.textContent = "Ready";
+        powerFill.style.width = "0%";
+        return;
+      }
+
+      roundLine.textContent = `Round ${Math.min(roundNumber, settings.totalRounds)} of ${settings.totalRounds}`;
+      const progress = Math.min(100, Math.round((scorePairs / getTargetPairTotal()) * 100));
+      powerFill.style.width = `${progress}%`;
+    }
+
+    function getTargetPairTotal() {
+      const pairsPerRound = selectedSounds.length === 1 ? 1 : 2;
+      return settings.totalRounds * pairsPerRound;
+    }
+
+    function selectCard(cardId) {
+      if (!activeRound || activeRound.finished) return;
+
+      const button = wordGrid.querySelector(`[data-id="${CSS.escape(cardId)}"]`);
+      if (!button || button.classList.contains("matched")) return;
+
+      if (selectedCards.includes(cardId)) {
+        selectedCards = selectedCards.filter(id => id !== cardId);
+        button.classList.remove("selected");
+        return;
+      }
+
+      selectedCards.push(cardId);
+      button.classList.add("selected");
+
+      if (selectedCards.length === 2) {
+        checkSelectedPair();
+      }
+    }
+
+    function checkSelectedPair() {
+      const cards = selectedCards.map(id => activeRound.cards.find(card => card.id === id));
+      const buttons = selectedCards.map(id => wordGrid.querySelector(`[data-id="${CSS.escape(id)}"]`));
+      const [first, second] = cards;
+      const isPair = first.soundId === second.soundId && !first.odd && !second.odd && first.word !== second.word;
+
+      if (isPair) {
+        buttons.forEach(button => {
+          button.classList.remove("selected");
+          button.classList.add("matched");
+          button.disabled = true;
+        });
+        activeRound.foundSoundIds.add(first.soundId);
+        scorePairs += 1;
+        showSoundLabel(first.soundLabel, first.word, second.word);
+        powerBrain();
+        updateFoundPairs(first.soundLabel, first.word, second.word);
+        updateStatus();
+        selectedCards = [];
+        if (activeRound.foundSoundIds.size === activeRound.targetPairCount) {
+          finishRound();
+        }
+      } else {
+        buttons.forEach(button => button.classList.add("wrong"));
+        hideFeedback();
+        setTimeout(() => {
+          buttons.forEach(button => button.classList.remove("selected", "wrong"));
+          selectedCards = [];
+        }, 520);
+      }
+    }
+
+    function showSoundLabel(label, firstWord, secondWord) {
+      if (settings.showLabels) {
+        feedback.textContent = label;
+        feedback.classList.remove("celebrate");
+        feedback.classList.add("show");
+        void feedback.offsetWidth;
+        feedback.classList.add("celebrate");
+        setTimeout(hideFeedback, 940);
+      } else {
+        hideFeedback();
+      }
+    }
+
+    function hideFeedback() {
+      feedback.classList.remove("show");
+      feedback.classList.remove("celebrate");
+      feedback.textContent = "";
+    }
+
+    function powerBrain() {
+      brain.classList.add("boost");
+      brain.textContent = scorePairs >= getTargetPairTotal() ? "FULL" : "ON";
+      setTimeout(() => brain.classList.remove("boost"), 330);
+    }
+
+    function updateFoundPairs(label, firstWord, secondWord) {
+      if (!settings.showLabels) return;
+
+      const chip = document.createElement("div");
+      chip.className = "pair-chip";
+      chip.textContent = `${firstWord} + ${secondWord}: ${label}`;
+      foundPairs.appendChild(chip);
+    }
+
+    function finishRound() {
+      activeRound.finished = true;
+      const oddCard = activeRound.cards.find(card => card.odd);
+      const oddButton = wordGrid.querySelector(`[data-id="${CSS.escape(oddCard.id)}"]`);
+      if (oddButton) {
+        oddButton.classList.add("matched");
+        oddButton.disabled = true;
+      }
+
+      if (settings.showLabels) {
+        const oddChip = document.createElement("div");
+        oddChip.className = "odd-chip";
+        oddChip.textContent = `${oddCard.word} is the odd word`;
+        foundPairs.appendChild(oddChip);
+      }
+
+      if (roundNumber >= settings.totalRounds) {
+        setTimeout(completeGame, 680);
+      } else {
+        setTimeout(fadeToNextRound, 900);
+      }
+    }
+
+    function fadeToNextRound() {
+      wordGrid.classList.add("fading-out");
+      setTimeout(() => {
+        nextRound();
+        wordGrid.classList.remove("fading-out");
+      }, 460);
+    }
+
+    function nextRound() {
+      if (!selectedSounds.length) return;
+      if (roundNumber >= settings.totalRounds) {
+        completeGame();
+        return;
+      }
+      roundNumber += 1;
+      buildRound();
+      hideFeedback();
+      renderRound();
+    }
+
+    function startGame() {
+      if (!readSettings()) {
+        feedback.textContent = "Choose at least one sound family.";
+        feedback.classList.add("show");
+        return;
+      }
+
+      stopTimer();
+      app.classList.add("playing");
+      completion.classList.remove("show");
+      roundNumber = 0;
+      scorePairs = 0;
+      selectedCards = [];
+      resetSoundQueue();
+      brain.textContent = "ON";
+      timer.hidden = !settings.timerEnabled;
+      if (settings.timerEnabled) {
+        startTimer();
+      }
+      nextRound();
+    }
+
+    function openTeacherControls() {
+      stopTimer();
+      playerMode = false;
+      app.classList.remove("playing", "player-mode");
+      completion.classList.remove("show");
+      shareBox.classList.remove("show");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    function startTimer() {
+      remainingSeconds = settings.timerSeconds;
+      updateTimer();
+      timerId = setInterval(() => {
+        remainingSeconds -= 1;
+        updateTimer();
+        if (remainingSeconds <= 0) {
+          stopTimer();
+          completeGame(true);
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function updateTimer() {
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = String(remainingSeconds % 60).padStart(2, "0");
+      timer.textContent = `${minutes}:${seconds}`;
+    }
+
+    function completeGame(timeUp = false) {
+      stopTimer();
+      activeRound = null;
+      const targetPairs = getTargetPairTotal();
+      const percent = Math.min(100, Math.round((scorePairs / targetPairs) * 100));
+      powerFill.style.width = `${percent}%`;
+      brain.textContent = scorePairs >= targetPairs ? "FULL" : "ON";
+      completionText.textContent = timeUp
+        ? `Time is up. You powered the brain with ${scorePairs} sound pairs.`
+        : `You powered the brain with ${scorePairs} sound pairs.`;
+      completion.classList.add("show");
+    }
+
+    renderSoundOptions();
+    timerToggle.addEventListener("change", () => {
+      timerInput.disabled = !timerToggle.checked;
+    });
+    startBtn.addEventListener("click", startGame);
+    shareBtn.addEventListener("click", createPlayerLink);
+    settingsBtn.addEventListener("click", openTeacherControls);
+    playAgainBtn.addEventListener("click", startGame);
+    completionSettingsBtn.addEventListener("click", openTeacherControls);
+    const urlSettings = getSettingsFromUrl();
+    if (urlSettings) {
+      applySettingsToControls(urlSettings);
+      playerMode = urlSettings.player;
+      app.classList.toggle("player-mode", playerMode);
+      startGame();
+    }
+    updateStatus();
+  </script>
+</body>
+</html>
