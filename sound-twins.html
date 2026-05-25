@@ -1836,8 +1836,8 @@
       selectedCards = [];
       const layout = getRoundLayout(cardCount);
 
-      activeRound.cards.forEach(card => {
-        const cardSlot = layout[wordGrid.children.length];
+      activeRound.cards.forEach((card, index) => {
+        const cardSlot = layout[index];
         card.view = {
           x: cardSlot.x,
           y: cardSlot.y,
@@ -1851,7 +1851,7 @@
         button.style.setProperty("--x", cardSlot.x);
         button.style.setProperty("--y", cardSlot.y);
         button.style.setProperty("--rotation", `${cardSlot.rotation}deg`);
-        button.style.setProperty("--delay", `${-0.4 - (wordGrid.children.length * 0.8)}s`);
+        button.style.setProperty("--delay", `${-0.4 - (index * 0.8)}s`);
         button.addEventListener("click", () => selectCard(card.id));
         wordGrid.appendChild(button);
         fitWordToCard(button);
