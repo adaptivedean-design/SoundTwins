@@ -232,6 +232,32 @@
       font-weight: 900;
     }
 
+    .live-panel {
+      display: none;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 3px solid rgba(8, 127, 149, 0.18);
+      border-radius: 12px;
+      background: rgba(232, 252, 248, 0.86);
+    }
+
+    .live-panel.show {
+      display: grid;
+    }
+
+    .live-status {
+      color: #103f52;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .live-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .nav-link {
       display: inline-flex;
       align-items: center;
@@ -382,6 +408,10 @@
       display: none;
     }
 
+    .live-player-mode ~ .completion #playAgainBtn {
+      display: none;
+    }
+
     .board {
       display: grid;
       grid-template-rows: minmax(360px, 1fr);
@@ -486,6 +516,17 @@
     .word-card.wrong {
       border-color: #e15b64;
       animation: shake 0.36s ease;
+    }
+
+    .teacher-live-mode .word-card {
+      cursor: pointer;
+    }
+
+    .word-card.remote-highlight {
+      border-color: #f5c542;
+      background: #fff8d9;
+      box-shadow: 0 0 0 10px rgba(245, 197, 66, 0.26), 0 14px 30px rgba(20, 63, 74, 0.18);
+      animation: spotlightPulse 1.05s ease both;
     }
 
     .found-pairs {
@@ -656,6 +697,18 @@
       }
     }
 
+    @keyframes spotlightPulse {
+      0%, 100% {
+        filter: brightness(1);
+      }
+      35% {
+        filter: brightness(1.08);
+      }
+      70% {
+        filter: brightness(1.02);
+      }
+    }
+
     @media (max-width: 940px) {
       .sound-options {
         grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -721,12 +774,21 @@
         <div class="setup-actions">
           <button id="startBtn" type="button">Start Game</button>
           <button id="shareBtn" type="button">Create Player Link</button>
+          <button id="liveRoomBtn" type="button">Create Live Room</button>
           <a class="nav-link" href="index.html">Menu</a>
         </div>
 
         <div class="share-box" id="shareBox">
           <input id="shareLink" type="text" readonly aria-label="Player link">
           <div class="share-note" id="shareNote"></div>
+        </div>
+
+        <div class="live-panel" id="livePanel">
+          <div class="live-status" id="liveStatus">Live room ready.</div>
+          <div class="live-actions">
+            <button id="liveStartBtn" type="button">Start Room</button>
+            <button id="liveResetBtn" type="button">Reset Room</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -778,7 +840,22 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAYGpYAjV0Xst3xA5qQWUiPkAC033ofaBc",
+      authDomain: "soundtwins-1d10b.firebaseapp.com",
+      databaseURL: "https://soundtwins-1d10b-default-rtdb.firebaseio.com",
+      projectId: "soundtwins-1d10b",
+      storageBucket: "soundtwins-1d10b.firebasestorage.app",
+      messagingSenderId: "1093213020398",
+      appId: "1:1093213020398:web:76e9b9f87f9d0fdce453ff"
+    };
+
+    const firebaseApp = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
     const soundFamilies = [
       {
         id: "bossy-r",
@@ -1091,6 +1168,11 @@
     const app = document.getElementById("app");
     const startBtn = document.getElementById("startBtn");
     const shareBtn = document.getElementById("shareBtn");
+    const liveRoomBtn = document.getElementById("liveRoomBtn");
+    const livePanel = document.getElementById("livePanel");
+    const liveStatus = document.getElementById("liveStatus");
+    const liveStartBtn = document.getElementById("liveStartBtn");
+    const liveResetBtn = document.getElementById("liveResetBtn");
     const shareBox = document.getElementById("shareBox");
     const shareLink = document.getElementById("shareLink");
     const shareNote = document.getElementById("shareNote");
@@ -1130,6 +1212,14 @@
     let timerId = null;
     let remainingSeconds = 0;
     let playerMode = false;
+    let liveMode = false;
+    let liveRole = "teacher";
+    let roomId = "";
+    let roomRef = null;
+    let roomListener = null;
+    let liveCountdownStarted = false;
+    let currentHighlightKey = "";
+    let highlightTimer = null;
     let pendingPlayerStart = false;
     const cardLayouts = {
       3: [
@@ -1220,7 +1310,8 @@
         timer: params.get("timer") === "1",
         seconds: clampNumber(params.get("seconds"), 30, 300, 120),
         labels: params.get("labels") !== "0",
-        player: params.get("player") === "1"
+        player: params.get("player") === "1",
+        room: params.get("room") || ""
       };
     }
 
@@ -1256,6 +1347,268 @@
       } catch (error) {
         shareNote.textContent = "Player link ready.";
       }
+    }
+
+    function buildRoomId() {
+      return Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+    }
+
+    function roomPath(id = roomId) {
+      return database.ref(`rooms/${id}`);
+    }
+
+    function getCurrentSettingsPayload() {
+      if (!readSettings()) return null;
+
+      return {
+        sounds: selectedSounds.map(sound => sound.id),
+        rounds: settings.totalRounds,
+        timer: settings.timerEnabled,
+        seconds: settings.timerSeconds,
+        labels: settings.showLabels
+      };
+    }
+
+    async function createLiveRoom() {
+      const payload = getCurrentSettingsPayload();
+      if (!payload) {
+        feedback.textContent = "Choose at least one sound family.";
+        feedback.classList.add("show");
+        return;
+      }
+
+      liveMode = true;
+      liveRole = "teacher";
+      roomId = buildRoomId();
+      roomRef = roomPath(roomId);
+      await roomRef.set({
+        state: "waiting",
+        settings: payload,
+        player: {
+          joined: false,
+          ready: false,
+          status: "waiting"
+        },
+        progress: {
+          round: 0,
+          pairsFound: 0,
+          totalPairs: payload.rounds * (payload.sounds.length === 1 ? 1 : 2),
+          finished: false,
+          cards: []
+        },
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+
+      const params = new URLSearchParams();
+      params.set("player", "1");
+      params.set("room", roomId);
+      params.set("sounds", payload.sounds.join(","));
+      params.set("rounds", payload.rounds);
+      params.set("timer", payload.timer ? "1" : "0");
+      params.set("seconds", payload.seconds);
+      params.set("labels", payload.labels ? "1" : "0");
+
+      shareLink.value = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+      shareBox.classList.add("show");
+      livePanel.classList.add("show");
+      subscribeToRoom(roomId);
+
+      try {
+        await navigator.clipboard.writeText(shareLink.value);
+        shareNote.textContent = `Live room ${roomId} copied.`;
+      } catch (error) {
+        shareNote.textContent = `Live room ${roomId} ready.`;
+      }
+    }
+
+    function subscribeToRoom(id) {
+      if (roomRef && roomListener) {
+        roomRef.off("value", roomListener);
+      }
+
+      roomRef = roomPath(id);
+      roomListener = snapshot => handleRoomUpdate(snapshot.val());
+      roomRef.on("value", roomListener);
+    }
+
+    function handleRoomUpdate(room) {
+      if (!room) return;
+
+      if (liveRole === "teacher") {
+        renderTeacherRoom(room);
+      } else {
+        handlePlayerRoom(room);
+      }
+    }
+
+    function renderTeacherRoom(room) {
+      livePanel.classList.add("show");
+      const playerStatus = room.player?.joined ? room.player.status || "joined" : "not joined";
+      const progress = room.progress || {};
+      liveStatus.textContent = `Room ${roomId}: ${room.state}. Player: ${playerStatus}. Progress: ${progress.pairsFound || 0}/${progress.totalPairs || 0} pairs.`;
+
+      if (room.state === "playing" || room.state === "finished") {
+        app.classList.add("playing");
+        app.classList.add("teacher-live-mode");
+        app.classList.remove("player-mode", "live-player-mode");
+        roundLine.textContent = room.state === "finished" ? "Finished" : `Round ${progress.round || 1} of ${room.settings?.rounds || settings.totalRounds}`;
+        const totalPairs = progress.totalPairs || 1;
+        powerFill.style.width = `${Math.min(100, Math.round(((progress.pairsFound || 0) / totalPairs) * 100))}%`;
+        renderObserverCards(progress.cards || []);
+        applyCardHighlight(room.highlight || null);
+      }
+    }
+
+    function renderObserverCards(cards) {
+      wordGrid.innerHTML = "";
+      foundPairs.innerHTML = "";
+      if (!cards.length) return;
+
+      const layout = getRoundLayout(cards.length);
+      cards.forEach((card, index) => {
+        const cardSlot = card.view || layout[index];
+        const button = document.createElement("button");
+        button.className = `word-card${card.matched ? " matched" : ""}`;
+        button.type = "button";
+        button.disabled = liveRole !== "teacher";
+        button.textContent = card.word;
+        button.dataset.id = card.id;
+        button.style.setProperty("--x", cardSlot.x);
+        button.style.setProperty("--y", cardSlot.y);
+        button.style.setProperty("--rotation", `${cardSlot.rotation}deg`);
+        button.style.setProperty("--delay", `${-0.4 - (index * 0.8)}s`);
+        if (liveRole === "teacher") {
+          button.addEventListener("click", () => spotlightCard(card.id));
+        }
+        wordGrid.appendChild(button);
+        fitWordToCard(button);
+      });
+    }
+
+    function handlePlayerRoom(room) {
+      if (room.settings) {
+        applySettingsToControls(room.settings);
+      }
+
+      if (room.state === "waiting" || room.state === "finished") {
+        liveCountdownStarted = false;
+        if (room.state === "waiting" && !room.player?.joined) {
+          roomRef.update({
+            "player/joined": true,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+        }
+        showPlayerReady(
+          room.state === "finished"
+            ? "Finished. Waiting for teacher."
+            : (room.player?.ready ? "Ready. Waiting for teacher." : "Press ready to start."),
+          room.state === "finished" || Boolean(room.player?.ready)
+        );
+      }
+
+      if (room.state === "countdown" && !liveCountdownStarted) {
+        liveCountdownStarted = true;
+        startPlayerCountdown();
+      }
+
+      applyCardHighlight(room.highlight || null);
+    }
+
+    async function spotlightCard(cardId) {
+      if (!liveMode || liveRole !== "teacher" || !roomRef) return;
+
+      await roomRef.update({
+        highlight: {
+          cardId,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        },
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    function applyCardHighlight(highlight) {
+      const cardId = highlight?.cardId || "";
+      const highlightKey = cardId ? `${cardId}-${highlight?.updatedAt || ""}` : "";
+      if (highlightKey === currentHighlightKey) return;
+
+      currentHighlightKey = highlightKey;
+      wordGrid.querySelectorAll(".word-card.remote-highlight").forEach(card => {
+        card.classList.remove("remote-highlight");
+      });
+
+      if (highlightTimer) {
+        clearTimeout(highlightTimer);
+        highlightTimer = null;
+      }
+
+      if (!cardId) return;
+
+      const card = wordGrid.querySelector(`[data-id="${CSS.escape(cardId)}"]`);
+      if (!card) return;
+
+      card.classList.add("remote-highlight");
+      highlightTimer = setTimeout(() => {
+        card.classList.remove("remote-highlight");
+        currentHighlightKey = "";
+      }, 1600);
+    }
+
+    async function startLiveRoom() {
+      if (!roomRef) return;
+      await roomRef.update({
+        state: "countdown",
+        "player/status": "starting",
+        "progress/round": 0,
+        "progress/pairsFound": 0,
+        "progress/finished": false,
+        "progress/cards": [],
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    async function resetLiveRoom() {
+      if (!roomRef) return;
+      const payload = getCurrentSettingsPayload();
+      if (!payload) return;
+
+      await roomRef.update({
+        state: "waiting",
+        settings: payload,
+        player: {
+          joined: false,
+          ready: false,
+          status: "waiting"
+        },
+        progress: {
+          round: 0,
+          pairsFound: 0,
+          totalPairs: payload.rounds * (payload.sounds.length === 1 ? 1 : 2),
+          finished: false,
+          cards: []
+        },
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      app.classList.remove("playing");
+      app.classList.remove("teacher-live-mode");
+      wordGrid.innerHTML = "";
+      roundLine.textContent = "Ready";
+      powerFill.style.width = "0%";
+    }
+
+    async function joinLiveRoom(id) {
+      liveMode = true;
+      liveRole = "player";
+      playerMode = true;
+      roomId = id;
+      currentHighlightKey = "";
+      app.classList.add("player-mode", "live-player-mode");
+      subscribeToRoom(id);
+      await roomPath(id).update({
+        "player/joined": true,
+        "player/status": "joined",
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
     }
 
     function shuffleArray(items) {
@@ -1355,6 +1708,7 @@
         targetPairCount: pairsNeeded,
         finished: false
       };
+      publishProgress();
     }
 
     function renderRound() {
@@ -1368,6 +1722,11 @@
 
       activeRound.cards.forEach(card => {
         const cardSlot = layout[wordGrid.children.length];
+        card.view = {
+          x: cardSlot.x,
+          y: cardSlot.y,
+          rotation: cardSlot.rotation
+        };
         const button = document.createElement("button");
         button.className = "word-card entering";
         button.type = "button";
@@ -1472,10 +1831,14 @@
         });
         activeRound.foundSoundIds.add(first.soundId);
         scorePairs += 1;
+        cards.forEach(card => {
+          card.matched = true;
+        });
         showSoundLabel(first.soundLabel, first.word, second.word);
         powerBrain();
         updateFoundPairs(first.soundLabel, first.word, second.word);
         updateStatus();
+        publishProgress();
         selectedCards = [];
         if (activeRound.foundSoundIds.size === activeRound.targetPairCount) {
           finishRound();
@@ -1532,6 +1895,8 @@
         oddButton.classList.add("matched");
         oddButton.disabled = true;
       }
+      oddCard.matched = true;
+      publishProgress();
 
       if (settings.showLabels) {
         const oddChip = document.createElement("div");
@@ -1586,15 +1951,24 @@
       if (settings.timerEnabled) {
         startTimer();
       }
+      if (liveMode && liveRole === "player" && roomRef) {
+        roomRef.update({
+          state: "playing",
+          "player/status": "playing",
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
       nextRound();
     }
 
-    function showPlayerReady() {
+    function showPlayerReady(message = "Press ready to start.", readyDisabled = false) {
       pendingPlayerStart = true;
       app.classList.add("playing", "player-mode");
       completion.classList.remove("show");
       readyOverlay.classList.add("show");
       countdownOverlay.classList.remove("show");
+      readyOverlay.querySelector("p").textContent = message;
+      readyBtn.disabled = readyDisabled;
       wordGrid.innerHTML = "";
       foundPairs.innerHTML = "";
       roundLine.textContent = "Ready";
@@ -1605,6 +1979,7 @@
       if (!pendingPlayerStart) return;
 
       pendingPlayerStart = false;
+      readyBtn.disabled = false;
       readyOverlay.classList.remove("show");
       countdownOverlay.classList.add("show");
 
@@ -1631,10 +2006,49 @@
       }, 800);
     }
 
+    async function handleReadyClick() {
+      if (liveMode && liveRole === "player" && roomRef) {
+        readyBtn.disabled = true;
+        await roomRef.update({
+          "player/ready": true,
+          "player/status": "ready",
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        readyOverlay.querySelector("p").textContent = "Ready. Waiting for teacher.";
+        return;
+      }
+
+      startPlayerCountdown();
+    }
+
+    async function publishProgress(status = "playing") {
+      if (!liveMode || liveRole !== "player" || !roomRef) return;
+
+      const cards = activeRound?.cards?.map(card => ({
+        id: card.id,
+        word: card.word,
+        soundLabel: card.soundLabel,
+        odd: Boolean(card.odd),
+        matched: Boolean(card.matched),
+        view: card.view || null
+      })) || [];
+
+      await roomRef.update({
+        "player/status": status,
+        "progress/round": roundNumber,
+        "progress/pairsFound": scorePairs,
+        "progress/totalPairs": getTargetPairTotal(),
+        "progress/finished": status === "finished",
+        "progress/cards": cards,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
     function openTeacherControls() {
       stopTimer();
       playerMode = false;
       app.classList.remove("playing", "player-mode");
+      app.classList.remove("teacher-live-mode", "live-player-mode");
       completion.classList.remove("show");
       shareBox.classList.remove("show");
       window.history.replaceState(null, "", window.location.pathname);
@@ -1676,7 +2090,17 @@
       completionText.textContent = timeUp
         ? `Time is up. You powered the brain with ${scorePairs} sound pairs.`
         : `You powered the brain with ${scorePairs} sound pairs.`;
-      completion.classList.add("show");
+      if (liveMode && liveRole === "player") {
+        publishProgress("finished");
+        roomRef.update({
+          state: "finished",
+          "player/status": "finished",
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        showPlayerReady("Finished. Waiting for teacher.", true);
+      } else {
+        completion.classList.add("show");
+      }
     }
 
     renderSoundOptions();
@@ -1685,16 +2109,21 @@
     });
     startBtn.addEventListener("click", startGame);
     shareBtn.addEventListener("click", createPlayerLink);
+    liveRoomBtn.addEventListener("click", createLiveRoom);
+    liveStartBtn.addEventListener("click", startLiveRoom);
+    liveResetBtn.addEventListener("click", resetLiveRoom);
     settingsBtn.addEventListener("click", openTeacherControls);
     playAgainBtn.addEventListener("click", startGame);
-    readyBtn.addEventListener("click", startPlayerCountdown);
+    readyBtn.addEventListener("click", handleReadyClick);
     completionSettingsBtn.addEventListener("click", openTeacherControls);
     const urlSettings = getSettingsFromUrl();
     if (urlSettings) {
       applySettingsToControls(urlSettings);
       playerMode = urlSettings.player;
       app.classList.toggle("player-mode", playerMode);
-      if (playerMode) {
+      if (urlSettings.room && playerMode) {
+        joinLiveRoom(urlSettings.room);
+      } else if (playerMode) {
         showPlayerReady();
       } else {
         startGame();
