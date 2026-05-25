@@ -308,48 +308,148 @@
     }
 
     .brain {
-      width: 86px;
-      height: 72px;
+      --brain-glow: rgba(245, 197, 66, 0.16);
+      width: 92px;
+      height: 78px;
       position: relative;
       display: grid;
-      place-items: end center;
-      padding-bottom: 7px;
-      border: 5px solid #087f95;
-      border-radius: 42px 42px 30px 30px;
+      place-items: center;
+      border: 4px solid rgba(8, 127, 149, 0.82);
+      border-radius: 42% 48% 38% 44% / 48% 48% 36% 38%;
       background:
-        radial-gradient(circle at 30% 30%, #fff5ae 0 12px, transparent 13px),
-        radial-gradient(circle at 70% 35%, #fff5ae 0 10px, transparent 11px),
-        #ffd96a;
-      color: #087f95;
-      font-weight: 900;
-      transition: transform 0.2s ease, filter 0.2s ease;
+        radial-gradient(circle at 26% 28%, rgba(255, 255, 255, 0.82) 0 10px, transparent 11px),
+        radial-gradient(circle at 72% 26%, rgba(255, 255, 255, 0.64) 0 8px, transparent 9px),
+        linear-gradient(135deg, #f9efd0 0%, #bdeee7 42%, #11a8a7 100%);
+      box-shadow:
+        inset 0 0 0 4px rgba(255, 255, 255, 0.42),
+        0 0 0 8px var(--brain-glow),
+        0 8px 18px rgba(20, 63, 74, 0.14);
+      transform: rotate(-2deg);
+      transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.25s ease;
+      overflow: visible;
+      animation: brainIdle 4.6s ease-in-out infinite;
     }
 
     .brain::before,
     .brain::after {
       content: "";
       position: absolute;
-      top: -14px;
-      width: 43px;
-      height: 42px;
-      border: 5px solid #087f95;
+      border: 3px solid rgba(8, 127, 149, 0.55);
+      border-left: 0;
       border-bottom: 0;
-      border-radius: 50% 50% 0 0;
-      background: #ffd96a;
-      z-index: -1;
+      border-radius: 50%;
+      opacity: 0.66;
+      pointer-events: none;
     }
 
     .brain::before {
-      left: 2px;
+      width: 48px;
+      height: 30px;
+      left: 14px;
+      top: 15px;
+      transform: rotate(12deg);
     }
 
     .brain::after {
-      right: 2px;
+      width: 38px;
+      height: 28px;
+      right: 12px;
+      bottom: 15px;
+      transform: rotate(-158deg);
+    }
+
+    .brain-face {
+      width: 42px;
+      height: 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brain-face::before,
+    .brain-face::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      width: 7px;
+      height: 9px;
+      border-radius: 50%;
+      background: #103f52;
+      box-shadow: inset 2px 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .brain-face::before {
+      left: 8px;
+    }
+
+    .brain-face::after {
+      right: 8px;
+    }
+
+    .brain-smile {
+      position: absolute;
+      left: 50%;
+      bottom: 2px;
+      width: 18px;
+      height: 8px;
+      border-bottom: 3px solid #103f52;
+      border-radius: 0 0 18px 18px;
+      transform: translateX(-50%);
+    }
+
+    .brain-spark {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #f5c542;
+      opacity: 0;
+      transform: scale(0.5);
+      box-shadow: 0 0 10px rgba(245, 197, 66, 0.74);
+    }
+
+    .brain-spark.one {
+      right: -5px;
+      top: 5px;
+    }
+
+    .brain-spark.two {
+      left: 1px;
+      bottom: 4px;
+    }
+
+    .brain-spark.three {
+      right: 13px;
+      bottom: -7px;
+    }
+
+    .brain.power-mid {
+      --brain-glow: rgba(18, 170, 169, 0.24);
+      filter: saturate(1.08);
+    }
+
+    .brain.power-full {
+      --brain-glow: rgba(245, 197, 66, 0.34);
+      filter: saturate(1.18) drop-shadow(0 0 10px rgba(245, 197, 66, 0.48));
+    }
+
+    .brain.power-mid .brain-spark.one,
+    .brain.power-full .brain-spark {
+      opacity: 1;
+      transform: scale(1);
+      animation: sparkTwinkle 1.4s ease-in-out infinite;
+    }
+
+    .brain.power-full .brain-spark.two {
+      animation-delay: 0.2s;
+    }
+
+    .brain.power-full .brain-spark.three {
+      animation-delay: 0.42s;
     }
 
     .brain.boost {
-      transform: scale(1.08) rotate(-2deg);
-      filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.9));
+      animation: brainBoost 0.34s ease both;
+      filter: saturate(1.18) drop-shadow(0 0 14px rgba(245, 197, 66, 0.82));
     }
 
     .power-info {
@@ -365,18 +465,51 @@
 
     .power-track {
       height: 24px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 0 8px;
       border: 3px solid #087f95;
       border-radius: 999px;
-      background: #ffffff;
+      background:
+        linear-gradient(90deg, transparent 8px, rgba(8, 127, 149, 0.22) 8px calc(100% - 8px), transparent calc(100% - 8px)),
+        #ffffff;
       overflow: hidden;
     }
 
     .power-fill {
+      position: absolute;
+      left: 8px;
+      right: auto;
+      top: 50%;
       width: 0%;
-      height: 100%;
+      height: 5px;
       border-radius: 999px;
       background: linear-gradient(90deg, #d8c75a, #52c98c, #12aaa9);
+      transform: translateY(-50%);
       transition: width 0.35s ease;
+      z-index: 1;
+    }
+
+    .neuron-node {
+      width: 12px;
+      height: 12px;
+      position: relative;
+      z-index: 2;
+      flex: 0 0 auto;
+      border: 3px solid rgba(8, 127, 149, 0.58);
+      border-radius: 50%;
+      background: #ffffff;
+      transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    }
+
+    .neuron-node.active {
+      border-color: #087f95;
+      background: #f5c542;
+      box-shadow: 0 0 0 5px rgba(245, 197, 66, 0.18), 0 0 12px rgba(18, 170, 169, 0.42);
+      transform: scale(1.08);
     }
 
     .timer {
@@ -687,6 +820,35 @@
       75% { transform: translateX(8px); }
     }
 
+    @keyframes brainIdle {
+      0%, 100% {
+        transform: rotate(-2deg) translateY(0);
+      }
+      50% {
+        transform: rotate(1deg) translateY(-2px);
+      }
+    }
+
+    @keyframes brainBoost {
+      0%, 100% {
+        transform: rotate(-2deg) scale(1);
+      }
+      45% {
+        transform: rotate(-5deg) scale(1.12);
+      }
+    }
+
+    @keyframes sparkTwinkle {
+      0%, 100% {
+        opacity: 0.68;
+        transform: scale(0.82);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.12);
+      }
+    }
+
     @keyframes cardRock {
       0%, 100% {
         transform: rotate(var(--rotation)) translateY(0);
@@ -836,10 +998,21 @@
       <div class="status-bar">
         <div class="power-station">
           <img class="corner-logo" src="Adaptivelogotrans.png" alt="Adaptive">
-          <div class="brain" id="brain">ON</div>
+          <div class="brain" id="brain" aria-label="Brain power">
+            <span class="brain-face" aria-hidden="true"><span class="brain-smile"></span></span>
+            <span class="brain-spark one" aria-hidden="true"></span>
+            <span class="brain-spark two" aria-hidden="true"></span>
+            <span class="brain-spark three" aria-hidden="true"></span>
+          </div>
           <div class="power-info">
             <div class="round-line" id="roundLine">Choose sounds and start.</div>
             <div class="power-track" aria-label="Brain power">
+              <span class="neuron-node"></span>
+              <span class="neuron-node"></span>
+              <span class="neuron-node"></span>
+              <span class="neuron-node"></span>
+              <span class="neuron-node"></span>
+              <span class="neuron-node"></span>
               <div class="power-fill" id="powerFill"></div>
             </div>
           </div>
@@ -1226,6 +1399,7 @@
     const roundLine = document.getElementById("roundLine");
     const powerFill = document.getElementById("powerFill");
     const brain = document.getElementById("brain");
+    const neuronNodes = [...document.querySelectorAll(".neuron-node")];
     const timer = document.getElementById("timer");
     const laserBtn = document.getElementById("laserBtn");
     const feedback = document.getElementById("feedback");
@@ -1500,7 +1674,9 @@
         app.classList.remove("player-mode", "live-player-mode");
         roundLine.textContent = room.state === "finished" ? "Finished" : `Round ${progress.round || 1} of ${room.settings?.rounds || settings.totalRounds}`;
         const totalPairs = progress.totalPairs || 1;
-        powerFill.style.width = `${Math.min(100, Math.round(((progress.pairsFound || 0) / totalPairs) * 100))}%`;
+        const powerProgress = Math.min(100, Math.round(((progress.pairsFound || 0) / totalPairs) * 100));
+        powerFill.style.width = `${powerProgress}%`;
+        updatePowerVisuals(powerProgress);
         renderObserverCards(progress.cards || []);
         applyCardHighlight(room.highlight || null);
         applyPointer(room.pointer || null);
@@ -1699,6 +1875,7 @@
       clearWordCards();
       roundLine.textContent = "Ready";
       powerFill.style.width = "0%";
+      updatePowerVisuals(0);
     }
 
     async function joinLiveRoom(id) {
@@ -1890,12 +2067,24 @@
       if (!selectedSounds.length) {
         roundLine.textContent = "Ready";
         powerFill.style.width = "0%";
+        updatePowerVisuals(0);
         return;
       }
 
       roundLine.textContent = `Round ${Math.min(roundNumber, settings.totalRounds)} of ${settings.totalRounds}`;
       const progress = Math.min(100, Math.round((scorePairs / getTargetPairTotal()) * 100));
       powerFill.style.width = `${progress}%`;
+      updatePowerVisuals(progress);
+    }
+
+    function updatePowerVisuals(progress) {
+      const activeNodes = Math.ceil((progress / 100) * neuronNodes.length);
+      neuronNodes.forEach((node, index) => {
+        node.classList.toggle("active", index < activeNodes);
+      });
+
+      brain.classList.toggle("power-mid", progress >= 34 && progress < 100);
+      brain.classList.toggle("power-full", progress >= 100);
     }
 
     function getTargetPairTotal() {
@@ -1980,7 +2169,6 @@
 
     function powerBrain() {
       brain.classList.add("boost");
-      brain.textContent = scorePairs >= getTargetPairTotal() ? "FULL" : "ON";
       setTimeout(() => brain.classList.remove("boost"), 330);
     }
 
@@ -2052,7 +2240,7 @@
       scorePairs = 0;
       selectedCards = [];
       resetSoundQueue();
-      brain.textContent = "ON";
+      updatePowerVisuals(0);
       timer.hidden = !settings.timerEnabled;
       if (settings.timerEnabled) {
         startTimer();
@@ -2079,6 +2267,7 @@
       foundPairs.innerHTML = "";
       roundLine.textContent = "Ready";
       powerFill.style.width = "0%";
+      updatePowerVisuals(0);
     }
 
     function startPlayerCountdown() {
@@ -2195,7 +2384,7 @@
       const targetPairs = getTargetPairTotal();
       const percent = Math.min(100, Math.round((scorePairs / targetPairs) * 100));
       powerFill.style.width = `${percent}%`;
-      brain.textContent = scorePairs >= targetPairs ? "FULL" : "ON";
+      updatePowerVisuals(percent);
       completionText.textContent = timeUp
         ? `Time is up. You powered the brain with ${scorePairs} sound pairs.`
         : `You powered the brain with ${scorePairs} sound pairs.`;
