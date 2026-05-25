@@ -400,6 +400,11 @@
       box-shadow: 0 6px 16px rgba(20, 63, 74, 0.1);
     }
 
+    .quiet-button.active {
+      background: #f5c542;
+      color: #103f52;
+    }
+
     .player-mode .teacher-only {
       display: none;
     }
@@ -522,11 +527,34 @@
       cursor: pointer;
     }
 
+    .teacher-live-mode .word-grid.laser-armed {
+      cursor: crosshair;
+    }
+
     .word-card.remote-highlight {
       border-color: #f5c542;
       background: #fff8d9;
       box-shadow: 0 0 0 10px rgba(245, 197, 66, 0.26), 0 14px 30px rgba(20, 63, 74, 0.18);
       animation: spotlightPulse 1.05s ease both;
+    }
+
+    .laser-dot {
+      position: absolute;
+      left: var(--laser-x);
+      top: var(--laser-y);
+      z-index: 8;
+      width: 34px;
+      height: 34px;
+      border: 4px solid #f5c542;
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 10px rgba(245, 197, 66, 0.18), 0 0 30px rgba(8, 127, 149, 0.24);
+    }
+
+    .laser-dot.show {
+      animation: laserPing 1.4s ease both;
     }
 
     .found-pairs {
@@ -709,6 +737,24 @@
       }
     }
 
+    @keyframes laserPing {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.62);
+      }
+      18% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      78% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.45);
+      }
+    }
+
     @media (max-width: 940px) {
       .sound-options {
         grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -806,12 +852,15 @@
           </div>
         </div>
         <div class="timer" id="timer" hidden>2:00</div>
+        <button class="quiet-button teacher-only" id="laserBtn" type="button">Laser</button>
         <button class="quiet-button teacher-only" id="settingsBtn" type="button">Settings</button>
       </div>
 
       <div class="board">
         <div class="feedback" id="feedback"></div>
-        <div class="word-grid" id="wordGrid" style="--card-count: 5"></div>
+        <div class="word-grid" id="wordGrid" style="--card-count: 5">
+          <div class="laser-dot" id="laserDot"></div>
+        </div>
         <div class="found-pairs" id="foundPairs" aria-label="Found pairs"></div>
       </div>
     </section>
@@ -1185,8 +1234,10 @@
     const powerFill = document.getElementById("powerFill");
     const brain = document.getElementById("brain");
     const timer = document.getElementById("timer");
+    const laserBtn = document.getElementById("laserBtn");
     const feedback = document.getElementById("feedback");
     const wordGrid = document.getElementById("wordGrid");
+    const laserDot = document.getElementById("laserDot");
     const foundPairs = document.getElementById("foundPairs");
     const completion = document.getElementById("completion");
     const completionText = document.getElementById("completionText");
@@ -1219,7 +1270,10 @@
     let roomListener = null;
     let liveCountdownStarted = false;
     let currentHighlightKey = "";
+    let currentPointerKey = "";
     let highlightTimer = null;
+    let laserTimer = null;
+    let laserActive = false;
     let pendingPlayerStart = false;
     const cardLayouts = {
       3: [
@@ -1457,11 +1511,12 @@
         powerFill.style.width = `${Math.min(100, Math.round(((progress.pairsFound || 0) / totalPairs) * 100))}%`;
         renderObserverCards(progress.cards || []);
         applyCardHighlight(room.highlight || null);
+        applyPointer(room.pointer || null);
       }
     }
 
     function renderObserverCards(cards) {
-      wordGrid.innerHTML = "";
+      clearWordCards();
       foundPairs.innerHTML = "";
       if (!cards.length) return;
 
@@ -1479,11 +1534,19 @@
         button.style.setProperty("--rotation", `${cardSlot.rotation}deg`);
         button.style.setProperty("--delay", `${-0.4 - (index * 0.8)}s`);
         if (liveRole === "teacher") {
-          button.addEventListener("click", () => spotlightCard(card.id));
+          button.addEventListener("click", event => {
+            if (laserActive) return;
+            event.stopPropagation();
+            spotlightCard(card.id);
+          });
         }
         wordGrid.appendChild(button);
         fitWordToCard(button);
       });
+    }
+
+    function clearWordCards() {
+      wordGrid.querySelectorAll(".word-card").forEach(card => card.remove());
     }
 
     function handlePlayerRoom(room) {
@@ -1513,6 +1576,7 @@
       }
 
       applyCardHighlight(room.highlight || null);
+      applyPointer(room.pointer || null);
     }
 
     async function spotlightCard(cardId) {
@@ -1525,6 +1589,54 @@
         },
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
+    }
+
+    async function sendLaserPoint(event) {
+      if (!liveMode || liveRole !== "teacher" || !roomRef || !laserActive) return;
+
+      const rect = wordGrid.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+      await roomRef.update({
+        pointer: {
+          x: Number(x.toFixed(2)),
+          y: Number(y.toFixed(2)),
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        },
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    function applyPointer(pointer) {
+      const pointerKey = pointer ? `${pointer.x}-${pointer.y}-${pointer.updatedAt || ""}` : "";
+      if (pointerKey === currentPointerKey) return;
+
+      currentPointerKey = pointerKey;
+      laserDot.classList.remove("show");
+
+      if (laserTimer) {
+        clearTimeout(laserTimer);
+        laserTimer = null;
+      }
+
+      if (!pointer) return;
+
+      laserDot.style.setProperty("--laser-x", `${pointer.x}%`);
+      laserDot.style.setProperty("--laser-y", `${pointer.y}%`);
+      void laserDot.offsetWidth;
+      laserDot.classList.add("show");
+      laserTimer = setTimeout(() => {
+        laserDot.classList.remove("show");
+        currentPointerKey = "";
+      }, 1500);
+    }
+
+    function toggleLaserMode() {
+      if (!liveMode || liveRole !== "teacher") return;
+
+      laserActive = !laserActive;
+      laserBtn.classList.toggle("active", laserActive);
+      wordGrid.classList.toggle("laser-armed", laserActive);
     }
 
     function applyCardHighlight(highlight) {
@@ -1563,6 +1675,8 @@
         "progress/pairsFound": 0,
         "progress/finished": false,
         "progress/cards": [],
+        highlight: null,
+        pointer: null,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
     }
@@ -1587,11 +1701,13 @@
           finished: false,
           cards: []
         },
+        highlight: null,
+        pointer: null,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
       app.classList.remove("playing");
       app.classList.remove("teacher-live-mode");
-      wordGrid.innerHTML = "";
+      clearWordCards();
       roundLine.textContent = "Ready";
       powerFill.style.width = "0%";
     }
@@ -1602,6 +1718,7 @@
       playerMode = true;
       roomId = id;
       currentHighlightKey = "";
+      currentPointerKey = "";
       app.classList.add("player-mode", "live-player-mode");
       subscribeToRoom(id);
       await roomPath(id).update({
@@ -1708,14 +1825,13 @@
         targetPairCount: pairsNeeded,
         finished: false
       };
-      publishProgress();
     }
 
     function renderRound() {
       const cardCount = activeRound.cards.length;
       wordGrid.style.setProperty("--card-count", cardCount);
       wordGrid.classList.toggle("three-card", cardCount === 3);
-      wordGrid.innerHTML = "";
+      clearWordCards();
       foundPairs.innerHTML = "";
       selectedCards = [];
       const layout = getRoundLayout(cardCount);
@@ -1742,6 +1858,7 @@
       });
 
       updateStatus();
+      publishProgress();
       requestAnimationFrame(() => {
         wordGrid.querySelectorAll(".word-card.entering").forEach(card => {
           fitWordToCard(card);
@@ -1969,7 +2086,7 @@
       countdownOverlay.classList.remove("show");
       readyOverlay.querySelector("p").textContent = message;
       readyBtn.disabled = readyDisabled;
-      wordGrid.innerHTML = "";
+      clearWordCards();
       foundPairs.innerHTML = "";
       roundLine.textContent = "Ready";
       powerFill.style.width = "0%";
@@ -2051,6 +2168,9 @@
       app.classList.remove("teacher-live-mode", "live-player-mode");
       completion.classList.remove("show");
       shareBox.classList.remove("show");
+      laserActive = false;
+      laserBtn.classList.remove("active");
+      wordGrid.classList.remove("laser-armed");
       window.history.replaceState(null, "", window.location.pathname);
     }
 
@@ -2112,6 +2232,8 @@
     liveRoomBtn.addEventListener("click", createLiveRoom);
     liveStartBtn.addEventListener("click", startLiveRoom);
     liveResetBtn.addEventListener("click", resetLiveRoom);
+    laserBtn.addEventListener("click", toggleLaserMode);
+    wordGrid.addEventListener("click", sendLaserPoint);
     settingsBtn.addEventListener("click", openTeacherControls);
     playAgainBtn.addEventListener("click", startGame);
     readyBtn.addEventListener("click", handleReadyClick);
