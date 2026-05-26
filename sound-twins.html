@@ -608,19 +608,19 @@
       position: fixed;
       left: 50%;
       top: 120px;
-      z-index: 5;
-      min-height: 48px;
+      z-index: 30;
+      min-height: 58px;
       display: grid;
       place-items: center;
-      padding: 8px 18px;
-      border: 3px solid rgba(18, 170, 169, 0.38);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 24px;
+      border: 4px solid rgba(245, 197, 66, 0.7);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.96);
       color: #087f95;
       text-align: center;
-      font-size: clamp(20px, 3vw, 30px);
+      font-size: clamp(24px, 4vw, 40px);
       font-weight: 900;
-      box-shadow: 0 8px 22px rgba(20, 63, 74, 0.1);
+      box-shadow: 0 16px 34px rgba(20, 63, 74, 0.18);
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, -8px);
@@ -698,6 +698,10 @@
       opacity: 0.58;
     }
 
+    .word-card.just-matched {
+      animation: matchCardPop 0.68s ease both;
+    }
+
     .word-card.wrong {
       border-color: #e15b64;
       animation: shake 0.36s ease;
@@ -723,14 +727,14 @@
       left: var(--laser-x);
       top: var(--laser-y);
       z-index: 8;
-      width: 34px;
-      height: 34px;
-      border: 4px solid #f5c542;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
+      background: #e9323e;
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, -50%);
-      box-shadow: 0 0 0 10px rgba(245, 197, 66, 0.18), 0 0 30px rgba(8, 127, 149, 0.24);
+      box-shadow: 0 0 0 5px rgba(233, 50, 62, 0.16), 0 0 18px rgba(233, 50, 62, 0.38);
       transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
@@ -908,16 +912,29 @@
     @keyframes matchCelebrate {
       0% {
         opacity: 0;
-        transform: translate(-50%, 8px) scale(0.92);
+        transform: translate(-50%, 12px) scale(0.88);
       }
       28% {
         opacity: 1;
-        transform: translate(-50%, 0) scale(1.08);
-        box-shadow: 0 0 0 8px rgba(245, 197, 66, 0.22), 0 8px 22px rgba(20, 63, 74, 0.1);
+        transform: translate(-50%, 0) scale(1.12);
+        box-shadow: 0 0 0 12px rgba(245, 197, 66, 0.24), 0 16px 34px rgba(20, 63, 74, 0.18);
       }
       100% {
         opacity: 1;
         transform: translate(-50%, 0) scale(1);
+      }
+    }
+
+    @keyframes matchCardPop {
+      0% {
+        transform: rotate(var(--rotation)) scale(1);
+      }
+      42% {
+        transform: rotate(var(--rotation)) scale(1.08);
+        box-shadow: 0 0 0 9px rgba(82, 201, 140, 0.24), 0 16px 30px rgba(20, 63, 74, 0.16);
+      }
+      100% {
+        transform: rotate(var(--rotation)) scale(1);
       }
     }
 
@@ -1539,6 +1556,9 @@
     let currentHighlightKey = "";
     let currentPointerKey = "";
     let highlightTimer = null;
+    let feedbackTimer = null;
+    let currentMatchKey = "";
+    let latestMatch = null;
     let laserActive = false;
     let pendingPlayerStart = false;
     let usedTargetWords = new Set();
@@ -1790,6 +1810,7 @@
         renderObserverCards(progress.cards || []);
         applyCardHighlight(room.highlight || null);
         applyPointer(room.pointer || null);
+        applyLiveFeedback(progress.lastMatch || null);
       }
 
       if (room.state === "finished") {
@@ -1872,6 +1893,15 @@
 
       applyCardHighlight(room.highlight || null);
       applyPointer(room.pointer || null);
+    }
+
+    function applyLiveFeedback(match) {
+      if (!match || !match.label) return;
+
+      const matchKey = `${match.label}:${match.firstWord}:${match.secondWord}:${match.updatedAt || ""}`;
+      if (matchKey === currentMatchKey) return;
+      currentMatchKey = matchKey;
+      showSoundLabel(match.label);
     }
 
     async function spotlightCard(cardId) {
@@ -2114,14 +2144,25 @@
       return word.toLowerCase();
     }
 
+    function getDistractorExcludedSoundIds(excludedSoundIds) {
+      const ids = new Set([...selectedSounds.map(sound => sound.id), ...excludedSoundIds]);
+      if (ids.has("long-u") || ids.has("long-oo")) {
+        ids.add("long-u");
+        ids.add("long-oo");
+      }
+      return ids;
+    }
+
     function chooseOddWord(excludedSoundIds) {
-      const selectedIds = selectedSounds.map(sound => sound.id);
-      const selectedWords = new Set(selectedSounds.flatMap(sound => sound.words.map(item => item.word.toLowerCase())));
+      const blockedIds = getDistractorExcludedSoundIds(excludedSoundIds);
+      const blockedWords = new Set(soundFamilies
+        .filter(sound => blockedIds.has(sound.id))
+        .flatMap(sound => sound.words.map(item => item.word.toLowerCase())));
       const unselectedSounds = soundFamilies
-        .filter(sound => !selectedIds.includes(sound.id) && !excludedSoundIds.includes(sound.id))
+        .filter(sound => !blockedIds.has(sound.id))
         .map(sound => ({
           ...sound,
-          words: sound.words.filter(item => !selectedWords.has(item.word.toLowerCase()))
+          words: sound.words.filter(item => !blockedWords.has(item.word.toLowerCase()))
         }))
         .filter(sound => sound.words.length > 0);
 
@@ -2284,14 +2325,21 @@
       if (isPair) {
         buttons.forEach(button => {
           button.classList.remove("selected");
-          button.classList.add("matched");
+          button.classList.add("matched", "just-matched");
           button.disabled = true;
+          setTimeout(() => button.classList.remove("just-matched"), 720);
         });
         activeRound.foundSoundIds.add(first.soundId);
         scorePairs += 1;
         cards.forEach(card => {
           card.matched = true;
         });
+        latestMatch = {
+          label: first.soundLabel,
+          firstWord: first.word,
+          secondWord: second.word,
+          updatedAt: Date.now()
+        };
         showSoundLabel(first.soundLabel, first.word, second.word);
         powerBrain();
         updateFoundPairs(first.soundLabel, first.word, second.word);
@@ -2313,18 +2361,26 @@
 
     function showSoundLabel(label, firstWord, secondWord) {
       if (settings.showLabels) {
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+          feedbackTimer = null;
+        }
         feedback.textContent = label;
         feedback.classList.remove("celebrate");
         feedback.classList.add("show");
         void feedback.offsetWidth;
         feedback.classList.add("celebrate");
-        setTimeout(hideFeedback, 940);
+        feedbackTimer = setTimeout(hideFeedback, 1450);
       } else {
         hideFeedback();
       }
     }
 
     function hideFeedback() {
+      if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+        feedbackTimer = null;
+      }
       feedback.classList.remove("show");
       feedback.classList.remove("celebrate");
       feedback.textContent = "";
@@ -2404,6 +2460,8 @@
       selectedCards = [];
       usedTargetWords = new Set();
       usedPatternCounts = new Map();
+      latestMatch = null;
+      currentMatchKey = "";
       resetSoundQueue();
       updatePowerVisuals(0);
       timer.hidden = !settings.timerEnabled;
@@ -2500,6 +2558,7 @@
         "progress/totalPairs": getTargetPairTotal(),
         "progress/finished": status === "finished",
         "progress/cards": cards,
+        "progress/lastMatch": latestMatch,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
     }
