@@ -239,7 +239,7 @@
 
     .live-panel {
       display: none;
-      gap: 8px;
+      gap: 12px;
       margin-top: 12px;
       padding: 12px;
       border: 3px solid rgba(8, 127, 149, 0.18);
@@ -254,6 +254,48 @@
     .live-status {
       color: #103f52;
       font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .live-field {
+      min-height: 58px;
+      padding: 8px 10px;
+      border: 2px solid rgba(18, 170, 169, 0.22);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .live-field span {
+      display: block;
+      margin-bottom: 4px;
+      color: #087f95;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .live-field strong {
+      display: block;
+      color: #103f52;
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+
+    .live-settings {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.62);
+      color: #103f52;
+      font-size: 14px;
+      font-weight: 800;
       line-height: 1.35;
     }
 
@@ -991,6 +1033,25 @@
 
         <div class="live-panel" id="livePanel">
           <div class="live-status" id="liveStatus">Live room ready.</div>
+          <div class="live-grid">
+            <div class="live-field">
+              <span>Room</span>
+              <strong id="liveRoomCode">-</strong>
+            </div>
+            <div class="live-field">
+              <span>Player</span>
+              <strong id="livePlayerState">Not joined</strong>
+            </div>
+            <div class="live-field">
+              <span>Progress</span>
+              <strong id="liveProgress">0/0 pairs</strong>
+            </div>
+            <div class="live-field">
+              <span>Room State</span>
+              <strong id="liveRoomState">Waiting</strong>
+            </div>
+          </div>
+          <div class="live-settings" id="liveSettings">No live room yet.</div>
           <div class="live-actions">
             <button id="liveStartBtn" type="button">Start Room</button>
             <button id="liveResetBtn" type="button">Reset Room</button>
@@ -1420,6 +1481,11 @@
     const liveRoomBtn = document.getElementById("liveRoomBtn");
     const livePanel = document.getElementById("livePanel");
     const liveStatus = document.getElementById("liveStatus");
+    const liveRoomCode = document.getElementById("liveRoomCode");
+    const livePlayerState = document.getElementById("livePlayerState");
+    const liveProgress = document.getElementById("liveProgress");
+    const liveRoomState = document.getElementById("liveRoomState");
+    const liveSettings = document.getElementById("liveSettings");
     const liveStartBtn = document.getElementById("liveStartBtn");
     const liveResetBtn = document.getElementById("liveResetBtn");
     const shareBox = document.getElementById("shareBox");
@@ -1702,7 +1768,15 @@
       livePanel.classList.add("show");
       const playerStatus = room.player?.joined ? room.player.status || "joined" : "not joined";
       const progress = room.progress || {};
-      liveStatus.textContent = `Room ${roomId}: ${room.state}. Player: ${playerStatus}. Progress: ${progress.pairsFound || 0}/${progress.totalPairs || 0} pairs.`;
+      const settingsInfo = room.settings || {};
+      liveStatus.textContent = room.state === "finished"
+        ? "Student finished. Adjust settings or reset the room."
+        : "Live room controls";
+      liveRoomCode.textContent = roomId || "-";
+      livePlayerState.textContent = formatRoomState(playerStatus);
+      liveProgress.textContent = `${progress.pairsFound || 0}/${progress.totalPairs || 0} pairs`;
+      liveRoomState.textContent = formatRoomState(room.state || "waiting");
+      liveSettings.textContent = `Sounds: ${getSoundLabels(settingsInfo.sounds)} | Rounds: ${settingsInfo.rounds || "-"} | Timer: ${settingsInfo.timer ? `${settingsInfo.seconds}s` : "Off"} | Celebration: ${settingsInfo.labels === false ? "Off" : "On"}`;
 
       if (room.state === "playing" || room.state === "finished") {
         app.classList.add("playing");
@@ -1723,6 +1797,17 @@
         app.classList.add("setup-visible");
         clearWordCards();
       }
+    }
+
+    function getSoundLabels(soundIds = []) {
+      const labels = soundIds
+        .map(id => soundFamilies.find(sound => sound.id === id)?.label)
+        .filter(Boolean);
+      return labels.length ? labels.join(", ") : "None";
+    }
+
+    function formatRoomState(state = "waiting") {
+      return state.charAt(0).toUpperCase() + state.slice(1);
     }
 
     function renderObserverCards(cards) {
