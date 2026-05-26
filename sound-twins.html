@@ -104,7 +104,7 @@
       width: 58px;
       height: 48px;
       flex: 0 0 auto;
-      background: url("assets/sound-twins-brain-states.png") 0 50% / 400% 100% no-repeat;
+      background: url("assets/brain-state-idle.png") center / contain no-repeat;
       filter: drop-shadow(0 5px 9px rgba(20, 63, 74, 0.14));
     }
 
@@ -314,7 +314,7 @@
 
     .power-station {
       display: grid;
-      grid-template-columns: 62px 96px minmax(0, 1fr);
+      grid-template-columns: 62px 116px minmax(0, 1fr);
       align-items: center;
       gap: 14px;
       padding: 12px 14px;
@@ -333,15 +333,15 @@
 
     .brain {
       --brain-glow: rgba(245, 197, 66, 0.16);
-      width: 96px;
-      height: 124px;
+      width: 116px;
+      height: 116px;
       position: relative;
       display: grid;
       place-items: center;
-      background: url("assets/sound-twins-brain-states.png") 0 50% / 400% 100% no-repeat;
+      background: url("assets/brain-state-idle.png") center / contain no-repeat;
       filter: drop-shadow(0 8px 14px rgba(20, 63, 74, 0.18));
       transform: rotate(-2deg);
-      transition: transform 0.2s ease, filter 0.2s ease, background-position 0.28s ease;
+      transition: transform 0.2s ease, filter 0.2s ease;
       overflow: visible;
       animation: brainIdle 4.6s ease-in-out infinite;
     }
@@ -351,17 +351,17 @@
     }
 
     .brain.power-low {
-      background-position: 33.333% 50%;
+      background-image: url("assets/brain-state-spark.png");
       filter: saturate(1.06) drop-shadow(0 0 11px rgba(245, 197, 66, 0.34));
     }
 
     .brain.power-mid {
-      background-position: 66.666% 50%;
+      background-image: url("assets/brain-state-strong.png");
       filter: saturate(1.12) drop-shadow(0 0 12px rgba(18, 170, 169, 0.32));
     }
 
     .brain.power-full {
-      background-position: 100% 50%;
+      background-image: url("assets/brain-state-full.png");
       filter: saturate(1.18) drop-shadow(0 0 14px rgba(245, 197, 66, 0.58));
     }
 
