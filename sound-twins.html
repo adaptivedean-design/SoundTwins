@@ -1261,13 +1261,18 @@
           { word: "dry", spelling: "final y" },
           { word: "why", spelling: "final y" },
           { word: "try", spelling: "final y" },
+          { word: "fry", spelling: "final y" },
+          { word: "pry", spelling: "final y" },
+          { word: "sly", spelling: "final y" },
+          { word: "spy", spelling: "final y" },
+          { word: "reply", spelling: "final y" },
+          { word: "supply", spelling: "final y" },
           { word: "by", spelling: "final y" },
           { word: "July", spelling: "final y" },
           { word: "pie", spelling: "ie" },
           { word: "tie", spelling: "ie" },
           { word: "lie", spelling: "ie" },
-          { word: "tried", spelling: "ie" },
-          { word: "cried", spelling: "ie" },
+          { word: "die", spelling: "ie" },
           { word: "fries", spelling: "ie" }
         ]
       },
@@ -1446,6 +1451,7 @@
     let highlightTimer = null;
     let laserActive = false;
     let pendingPlayerStart = false;
+    let usedTargetWords = new Set();
     const cardLayouts = {
       3: [
         [
@@ -1947,13 +1953,21 @@
     }
 
     function choosePair(sound) {
-      const first = shuffleArray(sound.words)[0];
-      const differentSpelling = shuffleArray(sound.words).find(item => item.word !== first.word && item.spelling !== first.spelling);
-      const second = differentSpelling || shuffleArray(sound.words).find(item => item.word !== first.word);
+      const unusedWords = sound.words.filter(item => !usedTargetWords.has(normalizeWord(item.word)));
+      const pool = unusedWords.length >= 2 ? unusedWords : sound.words;
+      const first = shuffleArray(pool)[0];
+      const differentSpelling = shuffleArray(pool).find(item => item.word !== first.word && item.spelling !== first.spelling);
+      const second = differentSpelling || shuffleArray(pool).find(item => item.word !== first.word);
+      usedTargetWords.add(normalizeWord(first.word));
+      usedTargetWords.add(normalizeWord(second.word));
       return [
         { ...first, soundId: sound.id, soundLabel: sound.label },
         { ...second, soundId: sound.id, soundLabel: sound.label }
       ];
+    }
+
+    function normalizeWord(word) {
+      return word.toLowerCase();
     }
 
     function chooseOddWord(excludedSoundIds) {
@@ -2244,6 +2258,7 @@
       roundNumber = 0;
       scorePairs = 0;
       selectedCards = [];
+      usedTargetWords = new Set();
       resetSoundQueue();
       updatePowerVisuals(0);
       timer.hidden = !settings.timerEnabled;
