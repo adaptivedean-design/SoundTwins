@@ -817,6 +817,33 @@
       font-weight: 800;
     }
 
+    .player-name-field {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 18px;
+      color: #103f52;
+      text-align: left;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .player-name-field input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 3px solid rgba(18, 170, 169, 0.38);
+      border-radius: 12px;
+      background: white;
+      color: #103f52;
+      font-size: 18px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .player-name-field input:focus {
+      border-color: #087f95;
+      box-shadow: 0 0 0 4px rgba(18, 170, 169, 0.16);
+    }
+
     .countdown-number {
       min-width: 180px;
       min-height: 180px;
@@ -1124,6 +1151,10 @@
     <div class="ready-panel">
       <h2>Sound Twins</h2>
       <p>Press ready to start.</p>
+      <label class="player-name-field">
+        What's your name?
+        <input id="playerNameInput" type="text" maxlength="24" autocomplete="name" placeholder="Type your name">
+      </label>
       <button id="readyBtn" type="button">Ready</button>
     </div>
   </div>
@@ -1721,6 +1752,7 @@
     const completionSettingsBtn = document.getElementById("completionSettingsBtn");
     const readyOverlay = document.getElementById("readyOverlay");
     const readyBtn = document.getElementById("readyBtn");
+    const playerNameInput = document.getElementById("playerNameInput");
     const countdownOverlay = document.getElementById("countdownOverlay");
     const countdownNumber = document.getElementById("countdownNumber");
 
@@ -1992,13 +2024,16 @@
     function renderTeacherRoom(room) {
       livePanel.classList.add("show");
       const playerStatus = room.player?.joined ? room.player.status || "joined" : "not joined";
+      const playerName = (room.player?.name || "").trim();
       const progress = room.progress || {};
       const settingsInfo = room.settings || {};
       liveStatus.textContent = room.state === "finished"
         ? "Student finished. Adjust settings or reset the room."
         : "Live room controls";
       liveRoomCode.textContent = roomId || "-";
-      livePlayerState.textContent = formatRoomState(playerStatus);
+      livePlayerState.textContent = playerName
+        ? `${playerName} (${formatRoomState(playerStatus)})`
+        : formatRoomState(playerStatus);
       liveProgress.textContent = `${progress.pairsFound || 0}/${progress.totalPairs || 0} pairs`;
       liveRoomState.textContent = formatRoomState(room.state || "waiting");
       liveSettings.textContent = `Sounds: ${getSoundLabels(settingsInfo.sounds)} | Rounds: ${settingsInfo.rounds || "-"} | Timer: ${settingsInfo.timer ? `${settingsInfo.seconds}s` : "Off"} | Celebration: ${settingsInfo.labels === false ? "Off" : "On"} | Level: ${settingsInfo.beginner ? "Beginner" : "Full"}`;
@@ -2034,6 +2069,10 @@
 
     function formatRoomState(state = "waiting") {
       return state.charAt(0).toUpperCase() + state.slice(1);
+    }
+
+    function getPlayerName() {
+      return playerNameInput.value.trim().replace(/\s+/g, " ").slice(0, 24);
     }
 
     function renderObserverCards(cards) {
@@ -2707,6 +2746,7 @@
       countdownOverlay.classList.remove("show");
       readyOverlay.querySelector("p").textContent = message;
       readyBtn.disabled = readyDisabled;
+      playerNameInput.disabled = readyDisabled;
       clearWordCards();
       foundPairs.innerHTML = "";
       roundLine.textContent = "Ready";
@@ -2747,8 +2787,17 @@
 
     async function handleReadyClick() {
       if (liveMode && liveRole === "player" && roomRef) {
+        const playerName = getPlayerName();
+        if (!playerName) {
+          readyOverlay.querySelector("p").textContent = "Enter your name, then click ready.";
+          playerNameInput.focus();
+          return;
+        }
+
         readyBtn.disabled = true;
+        playerNameInput.disabled = true;
         await roomRef.update({
+          "player/name": playerName,
           "player/ready": true,
           "player/status": "ready",
           updatedAt: firebase.database.ServerValue.TIMESTAMP
