@@ -1674,6 +1674,14 @@
       "weather", "wheat", "window"
     ]);
 
+    const soundFamilyOrder = [
+      "short-a", "short-e", "short-i", "short-o", "short-u",
+      "hard-c", "soft-c",
+      "ch", "sh", "th-unvoiced", "th-voiced",
+      "long-a", "long-e", "long-i", "long-o", "long-u", "long-oo",
+      "bossy-r"
+    ];
+
     const soundOptions = document.getElementById("soundOptions");
     const app = document.getElementById("app");
     const startBtn = document.getElementById("startBtn");
@@ -1798,8 +1806,16 @@
       ]
     };
 
+    function getOrderedSoundFamilies() {
+      return [...soundFamilies].sort((first, second) => {
+        const firstIndex = soundFamilyOrder.indexOf(first.id);
+        const secondIndex = soundFamilyOrder.indexOf(second.id);
+        return (firstIndex === -1 ? soundFamilyOrder.length : firstIndex) - (secondIndex === -1 ? soundFamilyOrder.length : secondIndex);
+      });
+    }
+
     function renderSoundOptions() {
-      soundOptions.innerHTML = soundFamilies.map(sound => `
+      soundOptions.innerHTML = getOrderedSoundFamilies().map(sound => `
         <label class="sound-option">
           <input type="checkbox" value="${sound.id}" ${sound.defaultSelected ? "checked" : ""}>
           ${sound.label}
@@ -2271,7 +2287,7 @@
 
     function getChosenSounds() {
       const chosenIds = [...soundOptions.querySelectorAll("input:checked")].map(input => input.value);
-      return soundFamilies.filter(sound => chosenIds.includes(sound.id)).map(withActiveWordPool);
+      return getOrderedSoundFamilies().filter(sound => chosenIds.includes(sound.id)).map(withActiveWordPool);
     }
 
     function readSettings() {
