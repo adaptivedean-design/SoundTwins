@@ -1185,6 +1185,18 @@
           { word: "wheel", spelling: "ee" },
           { word: "queen", spelling: "ee" },
           { word: "teeth", spelling: "ee" },
+          { word: "heel", spelling: "ee" },
+          { word: "deep", spelling: "ee" },
+          { word: "keep", spelling: "ee" },
+          { word: "week", spelling: "ee" },
+          { word: "street", spelling: "ee" },
+          { word: "sweet", spelling: "ee" },
+          { word: "cheek", spelling: "ee" },
+          { word: "creek", spelling: "ee" },
+          { word: "screen", spelling: "ee" },
+          { word: "breeze", spelling: "ee" },
+          { word: "cheese", spelling: "ee" },
+          { word: "sneeze", spelling: "ee" },
           { word: "sea", spelling: "ea" },
           { word: "read", spelling: "ea" },
           { word: "leaf", spelling: "ea" },
@@ -1197,6 +1209,18 @@
           { word: "clean", spelling: "ea" },
           { word: "dream", spelling: "ea" },
           { word: "speak", spelling: "ea" },
+          { word: "seat", spelling: "ea" },
+          { word: "mean", spelling: "ea" },
+          { word: "bean", spelling: "ea" },
+          { word: "cream", spelling: "ea" },
+          { word: "stream", spelling: "ea" },
+          { word: "please", spelling: "ea" },
+          { word: "reach", spelling: "ea" },
+          { word: "each", spelling: "ea" },
+          { word: "heat", spelling: "ea" },
+          { word: "wheat", spelling: "ea" },
+          { word: "least", spelling: "ea" },
+          { word: "east", spelling: "ea" },
           { word: "these", spelling: "e_e" },
           { word: "theme", spelling: "e_e" },
           { word: "scene", spelling: "e_e" },
@@ -1960,10 +1984,16 @@
 
     function choosePair(sound) {
       const unusedWords = sound.words.filter(item => !usedTargetWords.has(normalizeWord(item.word)));
-      const pool = unusedWords.length >= 2 ? unusedWords : sound.words;
-      const first = shuffleArray(pool)[0];
-      const differentSpelling = shuffleArray(pool).find(item => item.word !== first.word && item.spelling !== first.spelling);
-      const second = differentSpelling || shuffleArray(pool).find(item => item.word !== first.word);
+      const firstPool = unusedWords.length > 0 ? unusedWords : sound.words;
+      const first = shuffleArray(firstPool)[0];
+      const secondPools = [
+        unusedWords.filter(item => item.word !== first.word && item.spelling !== first.spelling),
+        unusedWords.filter(item => item.word !== first.word),
+        sound.words.filter(item => item.word !== first.word && item.spelling !== first.spelling),
+        sound.words.filter(item => item.word !== first.word)
+      ];
+      const secondPool = secondPools.find(pool => pool.length > 0) || [];
+      const second = shuffleArray(secondPool)[0];
       usedTargetWords.add(normalizeWord(first.word));
       usedTargetWords.add(normalizeWord(second.word));
       return [
