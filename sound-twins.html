@@ -1713,6 +1713,87 @@
       "bossy-r"
     ];
 
+    const wordSoundConflicts = {
+      "bag": ["short-a"],
+      "bath": ["short-a"],
+      "bed": ["short-e"],
+      "bench": ["short-e"],
+      "block": ["short-o"],
+      "box": ["short-o"],
+      "brick": ["short-i"],
+      "brush": ["short-u"],
+      "bug": ["short-u"],
+      "bus": ["short-u"],
+      "cat": ["short-a"],
+      "catch": ["short-a"],
+      "chat": ["short-a"],
+      "chip": ["short-i"],
+      "chin": ["short-i"],
+      "chop": ["short-o"],
+      "clap": ["short-a"],
+      "clock": ["short-o"],
+      "crab": ["short-a"],
+      "cross": ["short-o"],
+      "cup": ["short-u"],
+      "dog": ["short-o"],
+      "drop": ["short-o"],
+      "drum": ["short-u"],
+      "duck": ["short-u"],
+      "fish": ["short-i"],
+      "flag": ["short-a"],
+      "fox": ["short-o"],
+      "fresh": ["short-e"],
+      "frog": ["short-o"],
+      "grin": ["short-i"],
+      "hat": ["short-a"],
+      "hen": ["short-e"],
+      "hop": ["short-o"],
+      "jam": ["short-a"],
+      "leg": ["short-e"],
+      "lip": ["short-i"],
+      "log": ["short-o"],
+      "lunch": ["short-u"],
+      "map": ["short-a"],
+      "match": ["short-a"],
+      "math": ["short-a"],
+      "milk": ["short-i"],
+      "moth": ["short-o"],
+      "mud": ["short-u"],
+      "path": ["short-a"],
+      "pen": ["short-e"],
+      "pig": ["short-i"],
+      "pin": ["short-i"],
+      "plant": ["short-a"],
+      "pond": ["short-o"],
+      "red": ["short-e"],
+      "run": ["short-u"],
+      "sad": ["short-a"],
+      "shell": ["short-e"],
+      "ship": ["short-i"],
+      "shop": ["short-o"],
+      "shut": ["short-u"],
+      "sit": ["short-i"],
+      "skip": ["short-i"],
+      "sled": ["short-e"],
+      "snap": ["short-a"],
+      "spin": ["short-i"],
+      "stand": ["short-a"],
+      "step": ["short-e"],
+      "stick": ["short-i"],
+      "stuck": ["short-u"],
+      "sun": ["short-u"],
+      "that": ["short-a"],
+      "them": ["short-e"],
+      "then": ["short-e"],
+      "thin": ["short-i"],
+      "this": ["short-i"],
+      "thumb": ["short-u"],
+      "top": ["short-o"],
+      "truck": ["short-u"],
+      "web": ["short-e"],
+      "win": ["short-i"]
+    };
+
     const soundOptions = document.getElementById("soundOptions");
     const app = document.getElementById("app");
     const startBtn = document.getElementById("startBtn");
@@ -2403,6 +2484,23 @@
       return word.toLowerCase();
     }
 
+    function getCanonicalSoundId(soundId = "") {
+      return soundId.replace(/^distractor-/, "");
+    }
+
+    function getWordSoundIds(item) {
+      const ids = new Set();
+      if (item.soundId) {
+        ids.add(getCanonicalSoundId(item.soundId));
+      }
+      (wordSoundConflicts[normalizeWord(item.word)] || []).forEach(id => ids.add(id));
+      return ids;
+    }
+
+    function hasBlockedSound(item, blockedIds) {
+      return [...getWordSoundIds(item)].some(id => blockedIds.has(id));
+    }
+
     function getDistractorExcludedSoundIds(excludedSoundIds) {
       const ids = new Set([...selectedSounds.map(sound => sound.id), ...excludedSoundIds]);
       if (ids.has("long-u") || ids.has("long-oo")) {
@@ -2421,7 +2519,7 @@
         .filter(sound => !blockedIds.has(sound.id))
         .map(sound => ({
           ...sound,
-          words: getSoundWordPool(sound).filter(item => !blockedWords.has(item.word.toLowerCase()))
+          words: getSoundWordPool(sound).filter(item => !blockedWords.has(item.word.toLowerCase()) && !hasBlockedSound({ ...item, soundId: sound.id }, blockedIds))
         }))
         .filter(sound => sound.words.length > 0);
 
@@ -2431,7 +2529,7 @@
         return { ...word, soundId: sound.id, soundLabel: sound.label, odd: true };
       }
 
-      const fallbackWords = distractorWords.filter(item => !blockedIds.has(item.soundId) && !blockedWords.has(item.word.toLowerCase()));
+      const fallbackWords = distractorWords.filter(item => !hasBlockedSound(item, blockedIds) && !blockedWords.has(item.word.toLowerCase()));
       return { ...shuffleArray(fallbackWords.length ? fallbackWords : distractorWords)[0], odd: true };
     }
 
