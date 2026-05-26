@@ -1476,6 +1476,7 @@
     let laserActive = false;
     let pendingPlayerStart = false;
     let usedTargetWords = new Set();
+    let usedPatternCounts = new Map();
     const cardLayouts = {
       3: [
         [
@@ -1985,7 +1986,7 @@
     function choosePair(sound) {
       const unusedWords = sound.words.filter(item => !usedTargetWords.has(normalizeWord(item.word)));
       const firstPool = unusedWords.length > 0 ? unusedWords : sound.words;
-      const first = shuffleArray(firstPool)[0];
+      const first = chooseBalancedWord(sound, firstPool);
       const secondPools = [
         unusedWords.filter(item => item.word !== first.word && item.spelling !== first.spelling),
         unusedWords.filter(item => item.word !== first.word),
@@ -1993,13 +1994,35 @@
         sound.words.filter(item => item.word !== first.word)
       ];
       const secondPool = secondPools.find(pool => pool.length > 0) || [];
-      const second = shuffleArray(secondPool)[0];
+      const second = chooseBalancedWord(sound, secondPool);
       usedTargetWords.add(normalizeWord(first.word));
       usedTargetWords.add(normalizeWord(second.word));
+      markPatternUsed(sound, first);
+      markPatternUsed(sound, second);
       return [
         { ...first, soundId: sound.id, soundLabel: sound.label },
         { ...second, soundId: sound.id, soundLabel: sound.label }
       ];
+    }
+
+    function chooseBalancedWord(sound, words) {
+      const shuffled = shuffleArray(words);
+      const lowestCount = Math.min(...shuffled.map(item => getPatternCount(sound, item)));
+      const balancedPool = shuffled.filter(item => getPatternCount(sound, item) === lowestCount);
+      return shuffleArray(balancedPool)[0];
+    }
+
+    function getPatternKey(sound, item) {
+      return `${sound.id}:${item.spelling}`;
+    }
+
+    function getPatternCount(sound, item) {
+      return usedPatternCounts.get(getPatternKey(sound, item)) || 0;
+    }
+
+    function markPatternUsed(sound, item) {
+      const key = getPatternKey(sound, item);
+      usedPatternCounts.set(key, (usedPatternCounts.get(key) || 0) + 1);
     }
 
     function normalizeWord(word) {
@@ -2295,6 +2318,7 @@
       scorePairs = 0;
       selectedCards = [];
       usedTargetWords = new Set();
+      usedPatternCounts = new Map();
       resetSoundQueue();
       updatePowerVisuals(0);
       timer.hidden = !settings.timerEnabled;
