@@ -772,7 +772,11 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: rgba(12, 48, 58, 0.48);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(245, 197, 66, 0.28), transparent 24%),
+        radial-gradient(circle at 80% 16%, rgba(18, 170, 169, 0.26), transparent 24%),
+        rgba(12, 48, 58, 0.54);
       z-index: 20;
     }
 
@@ -865,11 +869,14 @@
 
     .completion-panel {
       width: min(430px, 100%);
+      position: relative;
+      z-index: 2;
       padding: 28px;
       border-radius: 16px;
       text-align: center;
       background: #ffffff;
       box-shadow: 0 18px 60px rgba(20, 63, 74, 0.3);
+      animation: completionPop 0.58s ease both;
     }
 
     .completion-panel h2 {
@@ -890,6 +897,49 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
+    }
+
+    .celebration-stage {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .confetti {
+      position: absolute;
+      top: -12%;
+      left: var(--x);
+      width: 12px;
+      height: 18px;
+      border-radius: 3px;
+      background: var(--color);
+      opacity: 0;
+      transform: rotate(var(--spin));
+      animation: confettiFall var(--duration) linear infinite;
+      animation-delay: var(--delay);
+    }
+
+    .firework {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow:
+        0 -34px 0 var(--color),
+        24px -24px 0 var(--color),
+        34px 0 0 var(--color),
+        24px 24px 0 var(--color),
+        0 34px 0 var(--color),
+        -24px 24px 0 var(--color),
+        -34px 0 0 var(--color),
+        -24px -24px 0 var(--color);
+      opacity: 0;
+      animation: fireworkBurst 1.35s ease-out infinite;
+      animation-delay: var(--delay);
     }
 
     @keyframes shake {
@@ -998,6 +1048,51 @@
       }
       50% {
         transform: translate(-50%, -50%) scale(1.08);
+      }
+    }
+
+    @keyframes completionPop {
+      0% {
+        opacity: 0;
+        transform: translateY(18px) scale(0.94);
+      }
+      70% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes confettiFall {
+      0% {
+        opacity: 0;
+        transform: translateY(0) rotate(var(--spin));
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0.92;
+        transform: translateY(120vh) rotate(calc(var(--spin) + 520deg));
+      }
+    }
+
+    @keyframes fireworkBurst {
+      0% {
+        opacity: 0;
+        transform: scale(0.18);
+        filter: blur(0);
+      }
+      18% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.8);
+        filter: blur(1px);
       }
     }
 
@@ -1164,8 +1259,22 @@
   </div>
 
   <div class="completion" id="completion">
+    <div class="celebration-stage" aria-hidden="true">
+      <span class="confetti" style="--x: 6%; --color: #f5c542; --spin: 18deg; --duration: 3.6s; --delay: 0s"></span>
+      <span class="confetti" style="--x: 14%; --color: #12aaa9; --spin: -26deg; --duration: 4.1s; --delay: 0.35s"></span>
+      <span class="confetti" style="--x: 23%; --color: #e9323e; --spin: 42deg; --duration: 3.8s; --delay: 0.15s"></span>
+      <span class="confetti" style="--x: 34%; --color: #7bc96f; --spin: -12deg; --duration: 4.4s; --delay: 0.55s"></span>
+      <span class="confetti" style="--x: 46%; --color: #087f95; --spin: 36deg; --duration: 3.7s; --delay: 0.8s"></span>
+      <span class="confetti" style="--x: 57%; --color: #f5c542; --spin: -44deg; --duration: 4.2s; --delay: 0.25s"></span>
+      <span class="confetti" style="--x: 68%; --color: #12aaa9; --spin: 28deg; --duration: 3.9s; --delay: 0.65s"></span>
+      <span class="confetti" style="--x: 79%; --color: #e9323e; --spin: -18deg; --duration: 4.5s; --delay: 0.1s"></span>
+      <span class="confetti" style="--x: 90%; --color: #7bc96f; --spin: 52deg; --duration: 3.5s; --delay: 0.45s"></span>
+      <span class="firework" style="--x: 18%; --y: 28%; --color: #f5c542; --delay: 0.15s"></span>
+      <span class="firework" style="--x: 78%; --y: 24%; --color: #12aaa9; --delay: 0.55s"></span>
+      <span class="firework" style="--x: 50%; --y: 18%; --color: #e9323e; --delay: 0.95s"></span>
+    </div>
     <div class="completion-panel">
-      <h2>Brain powered!</h2>
+      <h2 id="completionTitle">Brain powered!</h2>
       <p id="completionText">You found the sound twins.</p>
       <div class="completion-actions">
         <button id="playAgainBtn" type="button">Play Again</button>
@@ -1828,6 +1937,7 @@
     const laserDot = document.getElementById("laserDot");
     const foundPairs = document.getElementById("foundPairs");
     const completion = document.getElementById("completion");
+    const completionTitle = document.getElementById("completionTitle");
     const completionText = document.getElementById("completionText");
     const playAgainBtn = document.getElementById("playAgainBtn");
     const completionSettingsBtn = document.getElementById("completionSettingsBtn");
@@ -2193,6 +2303,11 @@
     function handlePlayerRoom(room) {
       if (room.settings) {
         applySettingsToControls(room.settings);
+      }
+
+      if (room.state === "finished" && room.player?.status === "finished") {
+        showCompletionScreen(false, true);
+        return;
       }
 
       if (room.state === "waiting" || room.state === "finished") {
@@ -2813,6 +2928,7 @@
       stopTimer();
       app.classList.add("playing");
       completion.classList.remove("show");
+      completion.classList.remove("live-finished");
       roundNumber = 0;
       scorePairs = 0;
       selectedCards = [];
@@ -2840,6 +2956,7 @@
       pendingPlayerStart = true;
       app.classList.add("playing", "player-mode");
       completion.classList.remove("show");
+      completion.classList.remove("live-finished");
       readyOverlay.classList.add("show");
       countdownOverlay.classList.remove("show");
       readyOverlay.querySelector("p").textContent = message;
@@ -2971,6 +3088,21 @@
       timer.textContent = `${minutes}:${seconds}`;
     }
 
+    function showCompletionScreen(timeUp = false, waitForTeacher = false) {
+      readyOverlay.classList.remove("show");
+      countdownOverlay.classList.remove("show");
+      completion.classList.toggle("live-finished", waitForTeacher);
+      completionTitle.textContent = waitForTeacher ? "Good job, you did it!" : "Brain powered!";
+      completionText.textContent = waitForTeacher
+        ? "Please hold for the teacher to reset."
+        : (timeUp
+          ? `Time is up. You powered the brain with ${scorePairs} sound pairs.`
+          : `You powered the brain with ${scorePairs} sound pairs.`);
+      completion.classList.remove("show");
+      void completion.offsetWidth;
+      completion.classList.add("show");
+    }
+
     function completeGame(timeUp = false) {
       stopTimer();
       activeRound = null;
@@ -2978,19 +3110,16 @@
       const percent = Math.min(100, Math.round((scorePairs / targetPairs) * 100));
       powerFill.style.width = `${percent}%`;
       updatePowerVisuals(percent);
-      completionText.textContent = timeUp
-        ? `Time is up. You powered the brain with ${scorePairs} sound pairs.`
-        : `You powered the brain with ${scorePairs} sound pairs.`;
       if (liveMode && liveRole === "player") {
+        showCompletionScreen(timeUp, true);
         publishProgress("finished");
         roomRef.update({
           state: "finished",
           "player/status": "finished",
           updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
-        showPlayerReady("Finished. Waiting for teacher.", true);
       } else {
-        completion.classList.add("show");
+        showCompletionScreen(timeUp);
       }
     }
 
