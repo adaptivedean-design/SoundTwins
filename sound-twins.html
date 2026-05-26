@@ -1692,6 +1692,12 @@
         applyCardHighlight(room.highlight || null);
         applyPointer(room.pointer || null);
       }
+
+      if (room.state === "finished") {
+        app.classList.remove("playing", "teacher-live-mode");
+        app.classList.add("setup-visible");
+        clearWordCards();
+      }
     }
 
     function renderObserverCards(cards) {
